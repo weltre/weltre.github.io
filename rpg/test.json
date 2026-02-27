@@ -1,77 +1,65 @@
 {
   "config": {
-    "title": "설산의 고립: 생존의 밤",
-    "startNode": "crash_site",
-    "themeColor": "#a5b1c2",
-    "subColor": "#eb3b5a",
+    "title": "심해의 부름: 산소 부족",
+    "startNode": "chamber_01",
+    "themeColor": "#00d2ff",
+    "subColor": "#7ed6df",
     "stats": [
-      { "key": "hp", "label": "🌡️ 체온", "initial": 50 },
-      { "key": "mental", "label": "🧠 정신력", "initial": 30 },
-      { "key": "battery", "label": "🔋 손전등", "initial": 100 }
+      { "key": "ox", "label": "🔵 산소 수치", "initial": 50 },
+      { "key": "pressure", "label": "⚓ 수압 견딤", "initial": 10 },
+      { "key": "mental", "label": "🧠 정신 오염", "initial": 0 }
     ]
   },
   "scenes": {
-    "crash_site": {
-      "text": "비행기 추락 후, 당신은 눈보라 치는 설산 한복판에서 눈을 떴습니다.\n멀리 희미하게 버려진 산장이 보입니다. 체온이 빠르게 떨어지고 있습니다.",
+    "chamber_01": {
+      "text": "잠수정의 전력이 나갔습니다. 비상 조명만이 깜빡이는 어두운 객실입니다.\n멀리서 철판을 긁는 소리가 들려옵니다.",
       "autoEvents": [
-        { "statKey": "hp", "threshold": 5, "next": "frozen_death", "message": "몸이 딱딱하게 굳어갑니다. 더 이상 움직일 수 없습니다..." }
+        { "statKey": "ox", "threshold": 5, "next": "death_ox", "message": "산소가 부족해 의식을 잃어갑니다..." }
       ],
       "options": [
-        { "text": "산장을 향해 필사적으로 달린다", "effects": { "hp": -10 }, "next": "cabin_front" },
         { 
-          "text": "주변 잔해를 뒤져본다 (확률)", 
+          "text": "캐비닛을 강제로 연다 (산소 소모)", 
+          "effects": { "ox": -10 },
           "results": [
-            { "chance": 70, "message": "눈 속에 파묻힌 비상 식량과 손난로를 찾았습니다!", "getItem": "비상 식량, 손난로", "next": "crash_site" },
-            { "chance": 30, "message": "날카로운 파편에 손을 베었습니다. 체온이 더 떨어집니다.", "effects": { "hp": -15 }, "next": "crash_site" }
+            { "chance": 60, "message": "녹슨 문을 열어 '휴대용 산소통'과 '손전등'을 얻었습니다!", "getItem": "산소통, 손전등", "next": "chamber_01" },
+            { "chance": 40, "message": "문이 걸려 열리지 않습니다. 헛심만 썼습니다.", "next": "chamber_01" }
           ]
-        }
-      ]
-    },
-    "cabin_front": {
-      "text": "산장 문 앞에 도착했습니다. 문은 굳게 잠겨 있고, 기괴한 긁힌 자국이 가득합니다.",
-      "options": [
-        { "text": "어깨로 문을 부순다", "effects": { "hp": -5, "mental": -5 }, "next": "cabin_inside" },
-        { "text": "손난로를 사용해 자물쇠를 녹인다", "requireItem": "손난로", "removeItem": "손난로", "next": "cabin_inside" }
-      ]
-    },
-    "cabin_inside": {
-      "text": "어두운 산장 내부입니다. 무언가 썩는 냄새가 진동합니다.\n바닥에 낡은 일기장이 떨어져 있습니다.",
-      "options": [
-        { 
-          "text": "일기장을 읽어본다 (정신력 소모)", 
-          "effects": { "mental": -10, "battery": -20 },
-          "results": [
-            { "chance": 100, "message": "'그것은 어둠 속에 산다...' 일기장에는 경고문이 적혀 있습니다.", "getItem": "괴물의 약점 정보", "next": "cabin_inside" }
-          ],
-          "maxClicks": 1
         },
-        { "text": "지하실로 내려간다", "next": "basement" }
-      ]
-    },
-    "basement": {
-      "text": "지하실 계단 끝에서 붉은 눈의 괴물과 마주쳤습니다!\n당신은 어떻게 하시겠습니까?",
-      "options": [
-        { "text": "괴물과 정면으로 싸운다", "effects": { "hp": -100 }, "next": "frozen_death" },
         { 
-          "text": "빛을 비춰 괴물을 쫓아낸다", 
-          "requireItem": "괴물의 약점 정보",
+          "text": "산소통을 사용하여 산소를 보충한다", 
+          "requireItem": "산소통",
+          "removeItem": "산소통",
+          "effects": { "ox": 40 },
+          "next": "chamber_01"
+        },
+        { "text": "조종실로 이동한다", "next": "cockpit" }
+      ]
+    },
+    "cockpit": {
+      "text": "조종실입니다. 전면에 거대한 심해 괴물이 보입니다.\n괴물과 눈이 마주치자 정신이 혼미해집니다.",
+      "options": [
+        { 
+          "text": "손전등으로 괴물을 비춘다", 
+          "requireItem": "손전등",
+          "effects": { "mental": 10, "ox": -5 },
           "results": [
-            { "chance": 100, "message": "일기장에서 읽은 대로 빛을 비추자 괴물이 비명을 지르며 도망칩니다!", "next": "escape_end" }
+            { "chance": 100, "message": "괴물이 빛을 피하며 멀어집니다! 해치가 열렸습니다.", "next": "escape_success" }
           ]
-        }
+        },
+        { "text": "맨눈으로 괴물을 노려본다", "effects": { "mental": 50 }, "next": "death_insane" }
       ]
     },
-    "frozen_death": {
-      "text": "당신은 차가운 설산의 일부가 되었습니다.\n진실은 영원히 눈 속에 묻힐 것입니다.",
-      "options": [
-        { "text": "처음부터 다시 도전", "isReset": true }
-      ]
+    "death_ox": {
+      "text": "당신은 차가운 바닷속에서 숨을 거두었습니다.\n구조대는 당신을 찾지 못할 것입니다.",
+      "options": [{ "text": "처음부터 다시", "isReset": true }]
     },
-    "escape_end": {
-      "text": "괴물이 사라진 틈을 타 산장 뒤편의 무전기를 작동시켰습니다!\n새벽녘, 구조 헬기의 소리가 들려옵니다.\n\n[생존 성공]",
-      "options": [
-        { "text": "메인 화면으로", "isReset": true }
-      ]
+    "death_insane": {
+      "text": "당신은 심해의 지식에 압도되어 미쳐버렸습니다.\n이제 당신도 괴물 중 하나가 되었습니다.",
+      "options": [{ "text": "처음부터 다시", "isReset": true }]
+    },
+    "escape_success": {
+      "text": "가까스로 탈출용 캡슐에 몸을 실었습니다.\n해수면 위로 밝은 햇살이 보이기 시작합니다.\n\n[생존 성공]",
+      "options": [{ "text": "메인 화면으로", "isReset": true }]
     }
   }
 }
