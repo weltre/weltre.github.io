@@ -2,12 +2,9 @@
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="container">
     <div class="status-bar">
-        <div id="p1-score" style="font-size:50px; color:var(--p1); font-weight:bold;">0</div>
-        <div id="timer-area" style="min-width:180px;">
-            <div id="timer" style="font-size:40px; color:var(--timer); font-weight:bold;">180</div>
-            <div id="res" style="font-size:24px; font-weight:bold; display:none;"></div>
-        </div>
-        <div id="p2-score" style="font-size:50px; color:var(--p2); font-weight:bold;">0</div>
+        <div id="p1-score" style="font-size:50px; color:#3498db; font-weight:bold;">0</div>
+        <div id="timer-area" style="min-width:180px;"><div id="timer" style="font-size:40px; color:var(--timer); font-weight:bold;">180</div><div id="res" style="font-size:24px; font-weight:bold; display:none;"></div></div>
+        <div id="p2-score" style="font-size:50px; color:#e74c3c; font-weight:bold;">0</div>
     </div>
     <canvas id="pong" width="700" height="450"></canvas>
     <div class="info-text">P1: W, S | P2: ↑, ↓ | 일시정지: Space<br><button onclick="location.href='index.html'">목록으로</button></div>
@@ -15,25 +12,19 @@
 <script>
     const cvs=document.getElementById("pong"), ctx=cvs.getContext("2d");
     const p1s=document.getElementById("p1-score"), p2s=document.getElementById("p2-score"), tEl=document.getElementById("timer"), resEl=document.getElementById("res");
-    let ball={x:350,y:225,r:8,vX:5,vY:5,speed:6}, p1={x:0,y:175,w:12,h:100,score:0}, p2={x:688,y:175,w:12,h:100,score:0}, keys={}, timeLeft=180, isP=false, isG=false;
-    window.onkeydown=(e)=>{ keys[e.key]=true; if(e.code==="Space")isP=!isP; };
-    window.onkeyup=(e)=>keys[e.key]=false;
-    function resetB(){ ball.x=350; ball.y=225; ball.vX*=-1; ball.speed=6; }
-    function checkE(){
-        if(p1.score>=10||p2.score>=10||timeLeft<=0){
-            isG=true; tEl.style.display="none"; resEl.style.display="block";
-            resEl.innerText=p1.score==p2.score?"무승부":(p1.score>p2.score?"파랑 승리!":"빨강 승리!");
-            resEl.style.color=p1.score>p2.score? "var(--p1)":"var(--p2)";
-        }
-    }
+    let ball={x:350,y:225,r:8,vX:5,vY:5,speed:6}, p1={x:10,y:175,w:12,h:100,score:0}, p2={x:678,y:175,w:12,h:100,score:0}, keys={}, timeLeft=180, isP=false, isG=false;
+    window.onkeydown=e=>{ keys[e.key]=true; if(e.code==="Space")isP=!isP; };
+    window.onkeyup=e=>keys[e.key]=false;
+    function resetB(){ ball.x=350; ball.y=225; ball.vX*=(Math.random()>0.5?1:-1); ball.vY=(Math.random()-0.5)*10; ball.speed=6; }
+    function checkE(){ if(p1.score>=10||p2.score>=10||timeLeft<=0){ isG=true; tEl.style.display="none"; resEl.style.display="block"; resEl.innerText=p1.score==p2.score?"무승부":(p1.score>p2.score?"파랑 승리!":"빨강 승리!"); resEl.style.color=p1.score>p2.score? "#3498db":"#e74c3c"; } }
     function update(){
         if(isP||isG)return;
-        if(keys['w']&&p1.y>0)p1.y-=8; if(keys['s']&&p1.y<450-p1.h)p1.y+=8;
+        if((keys['w']||keys['W'])&&p1.y>0)p1.y-=8; if((keys['s']||keys['S'])&&p1.y<450-p1.h)p1.y+=8;
         if(keys['ArrowUp']&&p2.y>0)p2.y-=8; if(keys['ArrowDown']&&p2.y<450-p2.h)p2.y+=8;
         ball.x+=ball.vX; ball.y+=ball.vY;
         if(ball.y+ball.r>450||ball.y-ball.r<0)ball.vY*=-1;
         let p=(ball.x<350)?p1:p2;
-        if(ball.x+ball.r>p.x&&ball.x-ball.r<p.x+p.w&&ball.y+ball.r>p.y&&ball.y-ball.r<p.y+p.h){
+        if(ball.x+ball.r>p.x && ball.x-ball.r<p.x+p.w && ball.y+ball.r>p.y && ball.y-ball.r<p.y+p.h){
             let cp=(ball.y-(p.y+p.h/2))/(p.h/2);
             ball.vX=((ball.x<350)?1:-1)*ball.speed*Math.cos(cp*Math.PI/4);
             ball.vY=ball.speed*Math.sin(cp*Math.PI/4); ball.speed+=0.4;
@@ -42,9 +33,9 @@
         else if(ball.x>700){p1.score++; p1s.innerText=p1.score; resetB(); checkE();}
     }
     function render(){
-        ctx.fillStyle="#000"; ctx.fillRect(0,0,700,450); ctx.fillStyle="#222"; ctx.fillRect(349,0,2,450);
-        ctx.fillStyle="var(--p1)"; ctx.fillRect(p1.x,p1.y,p1.w,p1.h);
-        ctx.fillStyle="var(--p2)"; ctx.fillRect(p2.x,p2.y,p2.w,p2.h);
+        ctx.fillStyle="#000"; ctx.fillRect(0,0,700,450); ctx.fillStyle="#333"; ctx.fillRect(349,0,2,450);
+        ctx.fillStyle="#3498db"; ctx.fillRect(p1.x,p1.y,p1.w,p1.h);
+        ctx.fillStyle="#e74c3c"; ctx.fillRect(p2.x,p2.y,p2.w,p2.h);
         ctx.fillStyle="#2ecc71"; ctx.beginPath(); ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2); ctx.fill();
     }
     setInterval(()=>{if(!isP&&!isG){timeLeft--; tEl.innerText=timeLeft; if(timeLeft<=0)checkE();}},1000);
