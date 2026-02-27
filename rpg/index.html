@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head><meta charset="UTF-8"><title>Player v6.2.1</title><link rel="stylesheet" href="common.css"></head>
+<head><meta charset="UTF-8"><title>Player v6.2.3</title><link rel="stylesheet" href="common.css"></head>
 <body>
     <div id="load-screen" class="container" style="justify-content: center; align-items: center;">
-        <h1 style="color:var(--point)">🎮 ENGINE v6.2.1</h1>
-        <input type="file" id="loader" accept=".json" style="padding:20px; border:2px dashed var(--border);">
+        <h1 style="color:var(--point)">🎮 ENGINE v6.2.3</h1>
+        <input type="file" id="loader" accept=".json">
     </div>
     <div id="game-ui" class="container" style="display:none">
         <div id="status-bar"></div><div id="inventory-bar"></div>
         <div id="scene-scroll"><div id="scene-text"></div></div>
         <div id="options-box"></div>
     </div>
-    <div id="msg-box"><h2 id="msg-title">알림</h2><div id="msg-content" style="margin:20px 0; text-align:left;"></div><button class="btn btn-blue" style="width:100%" onclick="closeMsg()">확인</button></div>
+    <div id="msg-box"><div id="msg-content" style="margin-bottom:20px; text-align:left;"></div><button class="btn btn-blue" style="width:100%" onclick="closeMsg()">확인</button></div>
 <script>
     let sc, state = { stats: {}, inv: new Set(), clicks: {}, next: null };
     document.getElementById('loader').onchange = e => {
@@ -37,18 +37,20 @@
         document.getElementById('inventory-bar').innerText = "🎒 소지품: " + (state.inv.size ? Array.from(state.inv).join(', ') : "없음");
     }
 
-    function applyLogic(obj) {
+    function applyData(obj) {
+        if(!obj) return;
         if(obj.effects) Object.keys(obj.effects).forEach(k => state.stats[k] = (state.stats[k]||0) + Number(obj.effects[k]));
-        if(obj.getItem) obj.getItem.split(',').forEach(i => i.trim() && state.inv.add(i.trim()));
-        if(obj.removeItem) obj.removeItem.split(',').forEach(i => i.trim() && state.inv.delete(i.trim()));
+        if(obj.getItem) obj.getItem.split(',').forEach(v => v.trim() && state.inv.add(v.trim()));
+        if(obj.removeItem) obj.removeItem.split(',').forEach(v => v.trim() && state.inv.delete(v.trim()));
     }
 
     function render(id) {
         const n = sc.scenes[id]; if(!n) return;
-        // 자동 이벤트 체크 (v5 기능 복구)
         if(n.autoEvents) {
             for(let e of n.autoEvents) {
-                if((state.stats[e.statKey]||0) < (e.threshold||0)) { showMsg(e.message, e.next||id); return; }
+                if((state.stats[e.statKey]||0) < (e.threshold||0)) { 
+                    showMsg(e.message, e.next||id); return; 
+                }
             }
         }
         updateUI();
@@ -67,11 +69,11 @@
             btn.onclick = () => {
                 state.clicks[key] = (state.clicks[key]||0) + 1;
                 if(o.isReset) return init();
-                applyLogic(o);
-                if(o.results?.length > 0) {
+                applyData(o);
+                if(o.results && o.results.length > 0) {
                     let roll = Math.random()*100, acc = 0, res = o.results[o.results.length-1];
                     for(let r of o.results) { acc += r.chance; if(roll <= acc) { res = r; break; } }
-                    applyLogic(res);
+                    applyData(res);
                     showMsg(res.message, res.next || o.next || id);
                 } else { render(o.next || id); }
             };
