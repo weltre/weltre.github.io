@@ -1,53 +1,53 @@
-<!DOCTYPE html><html><head><meta charset="UTF-8"><title>땅따먹기 대결</title>
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>땅따먹기 8x8</title>
 <style>
     :root { --bg: #1a1a1a; --p1: #3498db; --p2: #e74c3c; }
-    body { background: var(--bg); color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; }
-    .status { display: flex; gap: 40px; background: #2d2d2d; padding: 15px 30px; border-radius: 12px; margin-bottom: 15px; }
+    body { background: var(--bg); color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 15px; scale: 0.95; }
+    .status { display: flex; gap: 40px; background: #2d2d2d; padding: 12px 25px; border-radius: 12px; margin-bottom: 15px; align-items: center; }
     .player { display: flex; flex-direction: column; align-items: center; opacity: 0.3; transition: 0.3s; }
-    .player.active { opacity: 1; transform: scale(1.1); }
+    .player.active { opacity: 1; transform: scale(1.1); font-weight: bold; }
     .score { font-size: 30px; font-weight: bold; }
     canvas { background: #e3c17a; border: 5px solid #34495e; border-radius: 8px; cursor: pointer; box-shadow: 0 10px 30px #000; }
     .info { margin-top: 10px; color: #aaa; font-size: 13px; text-align: center; }
 </style></head><body>
 <div class="status">
     <div id="p1-area" class="player" style="color:var(--p1)"><span>파랑(P1)</span><div id="p1-score" class="score">0</div></div>
-    <div id="msg-area" style="text-align:center; min-width:120px; font-weight:bold;">차례: <span id="cur-turn">파랑</span></div>
+    <div style="text-align:center; min-width:150px;">
+        <div id="cur-turn" style="font-size:18px;">파랑 차례</div>
+        <button onclick="location.reload()" style="margin-top:5px; font-size:10px; padding:3px 8px; cursor:pointer;">초기화</button>
+    </div>
     <div id="p2-area" class="player" style="color:var(--p2)"><span>빨강(P2)</span><div id="p2-score" class="score">0</div></div>
 </div>
-<canvas id="game" width="500" height="500"></canvas>
-<div class="info">점과 점 사이를 클릭하여 선을 그으세요. 사각형을 완성하면 한 번 더!</div>
-<button onclick="location.reload()" style="margin-top:15px; padding:8px 16px; cursor:pointer;">게임 재시작</button>
+<canvas id="game" width="580" height="580"></canvas>
+<div class="info">8x8 격자판입니다. 사각형을 완성하면 한 번 더 기회를 얻습니다!</div>
 
 <script>
     const cvs = document.getElementById("game"), ctx = cvs.getContext("2d");
-    const ROWS = 6, COLS = 6, SIZE = 80, OFFSET = 50;
-    let turn = 1, p1Score = 0, p2Score = 0;
-    let lines = [], boxes = [];
+    const ROWS = 8, COLS = 8, SIZE = 60, OFFSET = 50; // 칸 수 증가, 사이즈 조절
+    let turn = 1, p1Score = 0, p2Score = 0, lines = [], boxes = [], lastLine = null;
 
-    // 초기화: 선(가로/세로) 및 박스 상태
-    for(let i=0; i<=ROWS; i++) lines[i] = []; 
-    for(let i=0; i<ROWS; i++) boxes[i] = [];
+    for(let r=0; r<ROWS; r++) boxes[r] = [];
 
-    canvasClick = (e) => {
+    cvs.onclick = (e) => {
         const rect = cvs.getBoundingClientRect(), x = e.clientX - rect.left - OFFSET, y = e.clientY - rect.top - OFFSET;
         let r = Math.round(y / SIZE), c = Math.round(x / SIZE);
         let dx = x - c * SIZE, dy = y - r * SIZE, hit = false, id = "";
 
-        if (Math.abs(dx) > Math.abs(dy)) { // 가로선 시도
+        if (Math.abs(dx) > Math.abs(dy)) {
             let col = dx > 0 ? c : c - 1;
             if (r >= 0 && r <= ROWS && col >= 0 && col < COLS) {
                 id = `h${r}${col}`;
-                if (!lines.includes(id)) { lines.push(id); hit = true; }
+                if (!lines.find(l => l.id === id)) { lines.push({id, owner: turn}); hit = true; }
             }
-        } else { // 세로선 시도
+        } else {
             let row = dy > 0 ? r : r - 1;
             if (c >= 0 && c <= COLS && row >= 0 && row < ROWS) {
                 id = `v${row}${c}`;
-                if (!lines.includes(id)) { lines.push(id); hit = true; }
+                if (!lines.find(l => l.id === id)) { lines.push({id, owner: turn}); hit = true; }
             }
         }
 
         if (hit) {
+            lastLine = id;
             let formed = checkSquare();
             if (!formed) turn = 3 - turn;
             updateUI();
@@ -56,10 +56,10 @@
 
     function checkSquare() {
         let newBox = false;
+        const hasL = (id) => lines.some(l => l.id === id);
         for (let r = 0; r < ROWS; r++) {
             for (let c = 0; c < COLS; c++) {
-                if (!boxes[r][c] && lines.includes(`h${r}${c}`) && lines.includes(`h${r+1}${c}`) && 
-                    lines.includes(`v${r}${c}`) && lines.includes(`v${r}${c+1}`)) {
+                if (!boxes[r][c] && hasL(`h${r}${c}`) && hasL(`h${r+1}${c}`) && hasL(`v${r}${c}`) && hasL(`v${r}${c+1}`)) {
                     boxes[r][c] = turn;
                     if(turn === 1) p1Score++; else p2Score++;
                     newBox = true;
@@ -71,24 +71,28 @@
 
     function render() {
         ctx.clearRect(0, 0, cvs.width, cvs.height);
-        // 박스 색칠
         for(let r=0; r<ROWS; r++) for(let c=0; c<COLS; c++) {
             if(boxes[r][c]) {
-                ctx.fillStyle = boxes[r][c] === 1 ? "rgba(52,152,219,0.3)" : "rgba(231,76,60,0.3)";
+                ctx.fillStyle = boxes[r][c] === 1 ? "rgba(52,152,219,0.4)" : "rgba(231,76,60,0.4)";
                 ctx.fillRect(OFFSET + c*SIZE, OFFSET + r*SIZE, SIZE, SIZE);
             }
         }
-        // 선 그리기
-        ctx.lineWidth = 5; ctx.lineCap = "round";
-        lines.forEach(id => {
-            let type = id[0], r = parseInt(id[1]), c = parseInt(id[2]);
-            ctx.strokeStyle = "#34495e";
+        ctx.lineCap = "round";
+        lines.forEach(line => {
+            let type = line.id[0], r = parseInt(line.id.substring(1).split(line.id.substring(2))[0]), 
+                c = parseInt(line.id.substring(2));
+            // 보강된 좌표 파싱 로직 (8x8 대응)
+            let type_str = line.id.substring(0,1);
+            let r_val = parseInt(line.id.substring(1,2));
+            let c_val = parseInt(line.id.substring(2,3));
+            
+            ctx.lineWidth = (line.id === lastLine) ? 7 : 4;
+            ctx.strokeStyle = line.owner === 1 ? "#3498db" : "#e74c3c";
             ctx.beginPath();
-            if(type === 'h') { ctx.moveTo(OFFSET + c*SIZE, OFFSET + r*SIZE); ctx.lineTo(OFFSET + (c+1)*SIZE, OFFSET + r*SIZE); }
-            else { ctx.moveTo(OFFSET + c*SIZE, OFFSET + r*SIZE); ctx.lineTo(OFFSET + c*SIZE, OFFSET + (r+1)*SIZE); }
+            if(type_str === 'h') { ctx.moveTo(OFFSET + c_val*SIZE, OFFSET + r_val*SIZE); ctx.lineTo(OFFSET + (c_val+1)*SIZE, OFFSET + r_val*SIZE); }
+            else { ctx.moveTo(OFFSET + c_val*SIZE, OFFSET + r_val*SIZE); ctx.lineTo(OFFSET + c_val*SIZE, OFFSET + (r_val+1)*SIZE); }
             ctx.stroke();
         });
-        // 점 그리기
         for(let r=0; r<=ROWS; r++) for(let c=0; c<=COLS; c++) {
             ctx.fillStyle = "#2c3e50"; ctx.beginPath();
             ctx.arc(OFFSET + c*SIZE, OFFSET + r*SIZE, 5, 0, Math.PI*2); ctx.fill();
@@ -100,14 +104,14 @@
         document.getElementById('p2-score').innerText = p2Score;
         document.getElementById('p1-area').classList.toggle('active', turn === 1);
         document.getElementById('p2-area').classList.toggle('active', turn === 2);
-        document.getElementById('cur-turn').innerText = turn === 1 ? "파랑" : "빨강";
+        const curTurnEl = document.getElementById('cur-turn');
+        curTurnEl.innerText = turn === 1 ? "파랑 차례" : "빨강 차례";
+        curTurnEl.style.color = turn === 1 ? "#3498db" : "#e74c3c";
         render();
         if (p1Score + p2Score === ROWS * COLS) {
-            let winText = p1Score > p2Score ? "파랑 승리!" : (p1Score < p2Score ? "빨강 승리!" : "무승부!");
-            document.getElementById('msg-area').innerHTML = `<span style="color:#e74c3c">${winText}</span>`;
+            curTurnEl.innerText = p1Score > p2Score ? "파랑 승리!" : (p1Score < p2Score ? "빨강 승리!" : "무승부!");
         }
     }
-
-    cvs.onclick = canvasClick;
     updateUI();
 </script></body></html>
+
