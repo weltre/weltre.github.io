@@ -1,144 +1,417 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head><meta charset="UTF-8"><title>Maker v6.2.5</title><link rel="stylesheet" href="common.css"></head>
-<body style="display:flex; flex-direction:column; height:100vh;">
-    <div style="background:#1a1d23; padding:15px; display:flex; justify-content:space-between; border-bottom:1px solid #333;">
-        <strong style="color:var(--point)">ENGINE MAKER v6.2.5</strong>
-        <div>
-            <button class="btn btn-orange" onclick="document.getElementById('f-in').click()">📂 로드</button>
-            <button class="btn btn-blue" onclick="save()">💾 저장</button>
-            <input type="file" id="f-in" style="display:none" onchange="load(event)">
-        </div>
-    </div>
-    <div style="display:flex; flex:1; overflow:hidden;">
-        <div id="side" style="width:280px; border-right:1px solid #333; overflow-y:auto; background:#15181c;">
-            <div style="padding:15px;"><button class="btn btn-blue" style="width:100%" onclick="addNode()">+ 장면 추가</button></div>
-            <div id="node-list"></div>
-        </div>
-        <div id="edit" style="flex:1; padding:25px; overflow-y:auto;">
-            <div class="opt-edit-card" style="margin-top:0;">
-                <label style="color:var(--point); font-weight:bold;">시나리오 설정</label>
-                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
-                    <input type="text" id="cfg-title" placeholder="게임 제목">
-                    <div style="display:flex;align-items:center;gap:5px;"><label>메인</label><input type="color" id="cfg-main"></div>
-                    <div style="display:flex;align-items:center;gap:5px;"><label>서브</label><input type="color" id="cfg-sub"></div>
-                </div>
-                <button class="btn btn-blue" style="width:100%; margin-top:10px;" onclick="addStat()">+ 스탯 추가</button>
-                <div id="stat-list"></div>
-            </div>
-            <div id="node-editor" style="display:none">
-                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; margin:15px 0;">
-                    <input type="text" id="ed-id" onblur="rename()">
-                    <button class="btn btn-orange" onclick="addAuto()">+ 자동이벤트</button>
-                    <button class="btn btn-blue" onclick="addOpt()">+ 선택지 추가</button>
-                </div>
-                <textarea id="ed-text" rows="5" placeholder="장면 텍스트"></textarea>
-                <div id="auto-list"></div><div id="opt-list"></div>
-            </div>
-        </div>
-    </div>
+<head>
+<meta charset="UTF-8">
+<title>ENGINE v6.3.0 FIXED</title>
+
+<style>
+:root{
+ --bg:#0f1115;--card:#1a1d23;--text:#e0e0e0;
+ --point:#00d2ff;--sub:#ff4757;--border:#333;
+}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui}
+nav{display:flex;gap:8px;padding:8px;background:#15181c;border-bottom:1px solid var(--border)}
+.nav-btn{padding:10px 16px;border:0;background:none;color:#888;font-weight:700;cursor:pointer}
+.nav-btn.active{color:var(--point);border-bottom:3px solid var(--point)}
+.btn{padding:8px 12px;border-radius:6px;border:0;font-weight:700;cursor:pointer}
+.blue{background:var(--point);color:#000}
+.red{background:#ff4757;color:#fff}
+.orange{background:#ff9f43;color:#000}
+
+.container{max-width:1100px;margin:auto;height:calc(100vh - 50px);display:flex}
+#player,#maker{flex:1;display:none;padding:16px;box-sizing:border-box}
+#player{flex-direction:column}
+
+.panel{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px}
+#scene{white-space:pre-wrap;line-height:1.6}
+.game-btn{width:100%;text-align:left;padding:14px;margin-top:8px;
+background:#1e2228;border:1px solid var(--border);
+border-left:5px solid var(--point);color:#fff;border-radius:8px;cursor:pointer}
+.game-btn:disabled{opacity:.4}
+
+#maker{display:flex;gap:10px}
+#nodes{width:260px;overflow:auto}
+#editor{flex:1;overflow:auto}
+
+input,textarea,select{
+width:100%;background:#000;color:#fff;border:1px solid var(--border);
+border-radius:5px;padding:6px;margin-top:4px;box-sizing:border-box
+}
+textarea{resize:vertical}
+hr{border:0;border-top:1px solid var(--border);margin:12px 0}
+
+.small{font-size:12px;color:#aaa}
+.row{display:flex;gap:6px}
+.card{border:1px solid #444;border-radius:8px;padding:8px;margin-top:8px;background:#1e2228}
+
+#modal{
+position:fixed;inset:0;background:rgba(0,0,0,.7);
+display:none;align-items:center;justify-content:center
+}
+#modalBox{
+background:var(--card);border:2px solid var(--sub);
+padding:20px;border-radius:12px;width:420px
+}
+</style>
+</head>
+
+<body>
+
+<nav>
+<button class="nav-btn active" data-tab="player">PLAY</button>
+<button class="nav-btn" data-tab="maker">MAKER</button>
+<input type="file" id="loader" hidden>
+<button class="btn orange" onclick="loader.click()">LOAD JSON</button>
+<button class="btn orange" onclick="saveJSON()">SAVE JSON</button>
+</nav>
+
+<div class="container">
+<div id="player">
+<div class="panel" id="status"></div>
+<div class="panel" id="inv"></div>
+<div class="panel" id="scene"></div>
+<div id="choices"></div>
+</div>
+
+<div id="maker">
+<div id="nodes">
+<button class="btn blue" style="width:100%" onclick="addNode()">+ NODE</button>
+<div id="nodeList"></div>
+</div>
+
+<div id="editor">
+<div class="card">
+<b>GLOBAL CONFIG</b>
+<input id="cfgTitle">
+<div class="row">
+<input type="color" id="cfgMain">
+<input type="color" id="cfgSub">
+</div>
+<div id="statList"></div>
+<button class="btn blue" onclick="addStat()">+ STAT</button>
+</div>
+
+<div id="nodeEditor" style="display:none">
+<hr>
+<input id="nodeId">
+<textarea id="nodeText" rows="4"></textarea>
+<button class="btn blue" onclick="addOption()">+ OPTION</button>
+<button class="btn orange" onclick="addAuto()">+ AUTO EVENT</button>
+<div id="autoList"></div>
+<div id="optList"></div>
+</div>
+</div>
+</div>
+
+<div id="modal">
+<div id="modalBox">
+<div id="modalText"></div>
+<button class="btn blue" style="width:100%" onclick="closeModal()">OK</button>
+</div>
+</div>
+
 <script>
-    let sc = { config: { title: "", themeColor: "#00d2ff", subColor: "#ff9f43", stats: [] }, scenes: { "start": { text: "시작", options: [] } } };
-    let cur = "start";
+/* ================== DATA ================== */
+let sc={
+config:{title:"",themeColor:"#00d2ff",subColor:"#ff4757",startNode:"start",stats:[]},
+scenes:{}
+}
+let curNode=null
+let state={stats:{},inv:new Set(),clicks:{},next:null}
 
-    // 데이터 싱크 함수
-    function sync() {
-        sc.config.title = document.getElementById('cfg-title').value;
-        sc.config.themeColor = document.getElementById('cfg-main').value;
-        sc.config.subColor = document.getElementById('cfg-sub').value;
-        if(cur && sc.scenes[cur]) sc.scenes[cur].text = document.getElementById('ed-text').value;
-    }
+/* ================== UTIL ================== */
+const $=id=>document.getElementById(id)
+function msg(t,n){$("modalText").innerText=t;$("modal").style.display="flex";state.next=n}
+function closeModal(){$("modal").style.display="none";if(state.next)render(state.next)}
 
-    function load(e) {
-        const r = new FileReader();
-        r.onload = ev => {
-            sc = JSON.parse(ev.target.result);
-            document.getElementById('cfg-title').value = sc.config.title || "";
-            document.getElementById('cfg-main').value = sc.config.themeColor || "#00d2ff";
-            document.getElementById('cfg-sub').value = sc.config.subColor || "#ff9f43";
-            stats(); list(); loadNode(sc.config.startNode || Object.keys(sc.scenes)[0]);
-        }; r.readAsText(e.target.files[0]);
-    }
+/* ================== TABS ================== */
+document.querySelectorAll(".nav-btn").forEach(b=>{
+b.onclick=()=>{
+document.querySelectorAll(".nav-btn").forEach(x=>x.classList.remove("active"))
+b.classList.add("active")
+$("player").style.display=b.dataset.tab==="player"?"flex":"none"
+$("maker").style.display=b.dataset.tab==="maker"?"flex":"none"
+if(b.dataset.tab==="player")initPlayer()
+}
+})
 
-    function stats() {
-        const l = document.getElementById('stat-list'); l.innerHTML = '';
-        sc.config.stats.forEach((s, i) => {
-            const d = document.createElement('div'); d.style.display="flex"; d.style.gap="5px"; d.style.marginTop="5px";
-            d.innerHTML = `<input type="text" value="${s.label}" placeholder="표기명" oninput="sc.config.stats[${i}].label=this.value">
-                           <input type="text" value="${s.key}" placeholder="키(영문)" onblur="sc.config.stats[${i}].key=this.value">
-                           <input type="number" value="${s.initial}" oninput="sc.config.stats[${i}].initial=Number(this.value)">
-                           <button class="btn btn-red" onclick="sc.config.stats.splice(${i},1); stats();">X</button>`;
-            l.appendChild(d);
-        });
-    }
+/* ================== LOAD / SAVE ================== */
+loader.onchange=e=>{
+const r=new FileReader()
+r.onload=ev=>{
+sc=JSON.parse(ev.target.result)
+applyTheme()
+renderMaker()
+initPlayer()
+}
+r.readAsText(e.target.files[0])
+}
 
-    function loadNode(id) {
-        sync(); cur = id;
-        document.getElementById('node-editor').style.display = 'block';
-        document.getElementById('ed-id').value = id;
-        document.getElementById('ed-text').value = sc.scenes[id].text || "";
-        list(); opts(); autos();
-    }
+function saveJSON(){
+const a=document.createElement("a")
+a.href=URL.createObjectURL(new Blob([JSON.stringify(sc,null,2)],{type:"application/json"}))
+a.download=(sc.config.title||"scenario")+".json"
+a.click()
+}
 
-    function opts() {
-        const l = document.getElementById('opt-list'); l.innerHTML = '';
-        sc.scenes[cur].options.forEach((o, i) => {
-            const d = document.createElement('div'); d.className = 'opt-edit-card';
-            d.innerHTML = `<input type="text" value="${o.text||''}" placeholder="선택지 내용" oninput="sc.scenes['${cur}'].options[${i}].text=this.value">
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-top:5px;">
-                    <input type="text" placeholder="다음장면" value="${o.next||''}" oninput="sc.scenes['${cur}'].options[${i}].next=this.value">
-                    <input type="text" placeholder="필요 아이템" value="${o.requireItem||''}" oninput="sc.scenes['${cur}'].options[${i}].requireItem=this.value">
-                    <input type="text" placeholder="획득 아이템" value="${o.getItem||''}" oninput="sc.scenes['${cur}'].options[${i}].getItem=this.value">
-                    <input type="text" placeholder="소모 아이템" value="${o.removeItem||''}" oninput="sc.scenes['${cur}'].options[${i}].removeItem=this.value">
-                </div>
-                <button class="btn btn-orange" style="width:100%; margin-top:8px;" onclick="addRes(${i})">+ 확률 결과 추가</button>
-                <div id="res-${i}"></div>
-                <button class="btn btn-red" style="width:100%; margin-top:10px;" onclick="sc.scenes['${cur}'].options.splice(${i},1); opts();">선택지 삭제</button>`;
-            l.appendChild(d);
-            o.results?.forEach((r, ri) => {
-                const rd = document.createElement('div'); rd.className = "res-edit-card";
-                rd.innerHTML = `<div style="display:flex;gap:5px;"><input type="number" value="${r.chance}" style="width:60px;" oninput="sc.scenes['${cur}'].options[${i}].results[${ri}].chance=Number(this.value)">% 
-                                <input type="text" placeholder="이동ID" value="${r.next||''}" oninput="sc.scenes['${cur}'].options[${i}].results[${ri}].next=this.value">
-                                <input type="text" placeholder="획득템" value="${r.getItem||''}" oninput="sc.scenes['${cur}'].options[${i}].results[${ri}].getItem=this.value"></div>
-                                <textarea oninput="sc.scenes['${cur}'].options[${i}].results[${ri}].message=this.value" placeholder="결과 메시지">${r.message||''}</textarea>
-                                <button class="btn btn-red" style="width:100%;padding:2px;" onclick="sc.scenes['${cur}'].options[${i}].results.splice(${ri},1); opts();">결과 삭제</button>`;
-                d.querySelector(`#res-${i}`).appendChild(rd);
-            });
-        });
-    }
+/* ================== PLAYER ================== */
+function initPlayer(){
+state={stats:{},inv:new Set(),clicks:{},next:null}
+sc.config.stats.forEach(s=>state.stats[s.key]=Number(s.initial)||0)
+render(sc.config.startNode)
+}
 
-    function autos() {
-        const l = document.getElementById('auto-list'); l.innerHTML = '';
-        sc.scenes[cur].autoEvents?.forEach((e, i) => {
-            const d = document.createElement('div'); d.className = "res-edit-card"; d.style.borderColor="var(--sub)";
-            d.innerHTML = `<select onchange="sc.scenes['${cur}'].autoEvents[${i}].statKey=this.value">
-                           ${sc.config.stats.map(s=>`<option value="${s.key}" ${s.key===e.statKey?'selected':''}>${s.label}</option>`).join('')}</select>
-                           <input type="number" value="${e.threshold}" oninput="sc.scenes['${cur}'].autoEvents[${i}].threshold=Number(this.value)"> 미만 시
-                           <input type="text" placeholder="이동ID" value="${e.next||''}" oninput="sc.scenes['${cur}'].autoEvents[${i}].next=this.value">
-                           <textarea oninput="sc.scenes['${cur}'].autoEvents[${i}].message=this.value" placeholder="이벤트 메시지">${e.message||''}</textarea>
-                           <button class="btn btn-red" style="width:100%" onclick="sc.scenes['${cur}'].autoEvents.splice(${i},1); autos();">자동이벤트 삭제</button>`;
-            l.appendChild(d);
-        });
-    }
+function render(id){
+const n=sc.scenes[id]; if(!n){msg("NODE 없음:"+id);return}
 
-    function addStat() { sc.config.stats.push({key:"stat_"+Date.now(), label:"신규스탯", initial:0}); stats(); }
-    function addNode() { const id = "node_"+Date.now(); sc.scenes[id] = {text:"", options:[]}; list(); loadNode(id); }
-    function addOpt() { sc.scenes[cur].options.push({text:"선택지", next:cur, effects:{}}); opts(); }
-    function addRes(i) { if(!sc.scenes[cur].options[i].results) sc.scenes[cur].options[i].results = []; 
-        sc.scenes[cur].options[i].results.push({chance:50, message:"", next:"", getItem:""}); opts(); }
-    function addAuto() { if(!sc.scenes[cur].autoEvents) sc.scenes[cur].autoEvents = [];
-        sc.scenes[cur].autoEvents.push({statKey:sc.config.stats[0]?.key||"", threshold:0, next:"", message:""}); autos(); }
-    function list() {
-        const l = document.getElementById('node-list'); l.innerHTML = '';
-        Object.keys(sc.scenes).forEach(id => {
-            const d = document.createElement('div'); d.innerText = id; d.className = "game-btn";
-            d.style.padding = "10px"; d.style.margin = "5px 15px"; d.style.fontSize="0.8em";
-            d.style.borderColor = cur === id ? "var(--point)" : "#333";
-            d.onclick = () => loadNode(id); l.appendChild(d);
-        });
-    }
-    function save() { sync(); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(sc, null, 2)])); a.download="scenario.json"; a.click(); }
-    function rename() { const n = document.getElementById('ed-id').value; if(n&&n!==cur){ sc.scenes[n]=sc.scenes[cur]; delete sc.scenes[cur]; cur=n; list(); } }
-    
-    stats(); list(); loadNode("start");
-</script></body></html>
+if(n.autoEvents){
+for(const e of n.autoEvents){
+if((state.stats[e.statKey]||0)<(e.threshold||0)){
+msg(e.message,e.next||id);return
+}}}
+
+$("status").innerHTML=sc.config.stats.map(s=>`${s.label}: ${state.stats[s.key]}`).join(" | ")
+$("inv").innerText="🎒 "+(state.inv.size?[...state.inv].join(", "):"없음")
+$("scene").innerText=n.text
+$("choices").innerHTML=""
+
+;(n.options||[]).forEach((o,i)=>{
+const k=id+"_"+i
+if(o.maxClicks && (state.clicks[k]||0)>=o.maxClicks)return
+let ok=true,miss=[]
+if(o.requireItem)o.requireItem.split(",").forEach(v=>{
+v=v.trim();if(v&&!state.inv.has(v)){ok=false;miss.push(v)}
+})
+const b=document.createElement("button")
+b.className="game-btn"
+b.disabled=!ok
+b.innerText=o.text+(o.maxClicks?` (${state.clicks[k]||0}/${o.maxClicks})`:"")+(ok?"":` [필요:${miss}]`)
+b.onclick=()=>{
+state.clicks[k]=(state.clicks[k]||0)+1
+if(o.isReset)return initPlayer()
+apply(o)
+if(o.results){
+let sum=o.results.reduce((a,r)=>a+(r.chance||0),0)
+let r=Math.random()*sum,acc=0,res=o.results.at(-1)
+for(const x of o.results){acc+=x.chance;if(r<=acc){res=x;break}}
+apply(res);msg(res.message,res.next||id)
+}else render(o.next||id)
+}
+$("choices").appendChild(b)
+})
+}
+
+function apply(o){
+if(o.effects)for(const k in o.effects)state.stats[k]=(state.stats[k]||0)+Number(o.effects[k])
+if(o.getItem)o.getItem.split(",").forEach(v=>state.inv.add(v.trim()))
+if(o.removeItem)o.removeItem.split(",").forEach(v=>state.inv.delete(v.trim()))
+}
+
+/* ================== MAKER ================== */
+function applyTheme(){
+document.documentElement.style.setProperty("--point",sc.config.themeColor)
+document.documentElement.style.setProperty("--sub",sc.config.subColor)
+$("cfgTitle").value=sc.config.title
+$("cfgMain").value=sc.config.themeColor
+$("cfgSub").value=sc.config.subColor
+}
+
+$("cfgTitle").oninput=e=>sc.config.title=e.target.value
+$("cfgMain").oninput=e=>{sc.config.themeColor=e.target.value;applyTheme()}
+$("cfgSub").oninput=e=>{sc.config.subColor=e.target.value;applyTheme()}
+
+function renderMaker(){
+renderNodes();renderStats();loadNode(sc.config.startNode)
+}
+
+function renderNodes(){
+$("nodeList").innerHTML=""
+Object.keys(sc.scenes).forEach(id=>{
+const d=document.createElement("div")
+d.className="game-btn";d.innerText=id
+d.onclick=()=>loadNode(id)
+$("nodeList").appendChild(d)
+})
+}
+
+function loadNode(id){
+curNode=id
+$("nodeEditor").style.display="block"
+$("nodeId").value=id
+$("nodeText").value=sc.scenes[id].text
+$("nodeText").oninput=e=>sc.scenes[id].text=e.target.value
+renderOptions();renderAutos()
+}
+
+$("nodeId").onblur=e=>{
+const n=e.target.value.trim()
+if(n&&n!==curNode){
+sc.scenes[n]=sc.scenes[curNode];delete sc.scenes[curNode]
+Object.values(sc.scenes).forEach(s=>{
+;(s.options||[]).forEach(o=>{
+if(o.next===curNode)o.next=n
+;(o.results||[]).forEach(r=>{if(r.next===curNode)r.next=n})
+})
+;(s.autoEvents||[]).forEach(a=>{if(a.next===curNode)a.next=n})
+})
+if(sc.config.startNode===curNode)sc.config.startNode=n
+curNode=n;renderNodes()
+}
+}
+
+/* -------- STATS -------- */
+function renderStats(){
+$("statList").innerHTML=""
+sc.config.stats.forEach((s,i)=>{
+const d=document.createElement("div");d.className="row"
+d.innerHTML=`
+<input value="${s.label}">
+<input value="${s.key}">
+<input type="number" value="${s.initial}">
+<button class="btn red">X</button>`
+const [l,k,v,x]=d.children
+l.oninput=()=>s.label=l.value
+k.oninput=()=>s.key=k.value
+v.oninput=()=>s.initial=Number(v.value)
+x.onclick=()=>{sc.config.stats.splice(i,1);renderStats()}
+$("statList").appendChild(d)
+})
+}
+function addStat(){sc.config.stats.push({key:"stat_"+Date.now(),label:"NEW",initial:0});renderStats()}
+
+/* -------- OPTIONS -------- */
+function renderOptions(){
+$("optList").innerHTML=""
+;(sc.scenes[curNode].options||[]).forEach((o,i)=>{
+const c=document.createElement("div");c.className="card"
+c.innerHTML=`
+<input value="${o.text||""}">
+<div class="row">
+<input placeholder="next" value="${o.next||""}">
+<input type="number" placeholder="max" value="${o.maxClicks||""}">
+<input placeholder="require" value="${o.requireItem||""}">
+</div>
+<div class="row">
+<input placeholder="get" value="${o.getItem||""}">
+<input placeholder="remove" value="${o.removeItem||""}">
+<label><input type="checkbox"${o.isReset?"checked":""}> reset</label>
+</div>
+<div class="small">EFFECTS</div>
+<div class="row effects"></div>
+<button class="btn orange">+ RESULT</button>
+<button class="btn red">DELETE</button>
+`
+const [t,n,m,rq,g,rm,chk]=c.querySelectorAll("input")
+t.oninput=()=>o.text=t.value
+n.oninput=()=>o.next=n.value
+m.oninput=()=>o.maxClicks=Number(m.value)
+rq.oninput=()=>o.requireItem=rq.value
+g.oninput=()=>o.getItem=g.value
+rm.oninput=()=>o.removeItem=rm.value
+chk.onchange=()=>o.isReset=chk.checked
+
+renderEffects(c.querySelector(".effects"),o.effects||={},v=>o.effects=v)
+
+c.querySelector(".orange").onclick=()=>{
+o.results=o.results||[]
+o.results.push({chance:50,message:"",next:""})
+renderOptions()
+}
+c.querySelector(".red").onclick=()=>{
+sc.scenes[curNode].options.splice(i,1)
+renderOptions()
+}
+$("optList").appendChild(c)
+
+;(o.results||[]).forEach((r,ri)=>{
+const rd=document.createElement("div");rd.className="card"
+rd.innerHTML=`
+<input type="number" value="${r.chance}">
+<input placeholder="next" value="${r.next||""}">
+<textarea>${r.message||""}</textarea>
+<div class="row effects"></div>
+<button class="btn red">DEL RESULT</button>`
+const [ch,nx,tx]=rd.querySelectorAll("input,textarea")
+ch.oninput=()=>r.chance=Number(ch.value)
+nx.oninput=()=>r.next=nx.value
+tx.oninput=()=>r.message=tx.value
+renderEffects(rd.querySelector(".effects"),r.effects||={},v=>r.effects=v)
+rd.querySelector(".red").onclick=()=>{
+o.results.splice(ri,1);renderOptions()
+}
+$("optList").appendChild(rd)
+})
+})
+}
+
+function renderEffects(box,obj,setter){
+box.innerHTML=""
+Object.keys(obj).forEach(k=>{
+const d=document.createElement("div");d.className="row"
+d.innerHTML=`<input value="${k}"><input type="number" value="${obj[k]}"><button class="btn red">X</button>`
+const [kk,v,x]=d.children
+kk.oninput=()=>{obj[kk.value]=obj[k];delete obj[k]}
+v.oninput=()=>obj[kk.value]=Number(v.value)
+x.onclick=()=>{delete obj[k];renderEffects(box,obj,setter)}
+box.appendChild(d)
+})
+const add=document.createElement("button")
+add.className="btn blue";add.innerText="+ EFFECT"
+add.onclick=()=>{
+obj[sc.config.stats[0]?.key||"stat"]=0
+renderEffects(box,obj,setter)
+}
+box.appendChild(add)
+setter(obj)
+}
+
+function addOption(){
+sc.scenes[curNode].options=sc.scenes[curNode].options||[]
+sc.scenes[curNode].options.push({text:"NEW OPTION",next:curNode})
+renderOptions()
+}
+
+/* -------- AUTO EVENTS -------- */
+function renderAutos(){
+$("autoList").innerHTML=""
+;(sc.scenes[curNode].autoEvents||[]).forEach((a,i)=>{
+const d=document.createElement("div");d.className="card"
+d.innerHTML=`
+<select></select>
+<input type="number" value="${a.threshold}">
+<input placeholder="next" value="${a.next||""}">
+<textarea>${a.message||""}</textarea>
+<button class="btn red">DELETE</button>`
+const sel=d.querySelector("select")
+sc.config.stats.forEach(s=>{
+const o=document.createElement("option")
+o.value=s.key;o.text=s.label
+if(s.key===a.statKey)o.selected=true
+sel.appendChild(o)
+})
+sel.onchange=()=>a.statKey=sel.value
+d.querySelectorAll("input")[0].oninput=e=>a.threshold=Number(e.target.value)
+d.querySelectorAll("input")[1].oninput=e=>a.next=e.target.value
+d.querySelector("textarea").oninput=e=>a.message=e.target.value
+d.querySelector(".red").onclick=()=>{
+sc.scenes[curNode].autoEvents.splice(i,1);renderAutos()
+}
+$("autoList").appendChild(d)
+})
+}
+
+function addAuto(){
+sc.scenes[curNode].autoEvents=sc.scenes[curNode].autoEvents||[]
+sc.scenes[curNode].autoEvents.push({
+statKey:sc.config.stats[0]?.key||"",
+threshold:0,next:"",message:""
+})
+renderAutos()
+}
+
+/* ================== INIT ================== */
+$("player").style.display="flex"
+</script>
+
+</body>
+</html>
