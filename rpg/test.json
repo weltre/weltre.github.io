@@ -1,82 +1,33 @@
 {
   "config": {
-    "startNode": "hallway",
+    "startNode": "bridge",
     "stats": [
-      { "key": "hp", "label": "❤️ 체력", "initial": 100 },
-      { "key": "sanity", "label": "🧠 정신력", "initial": 50 }
-    ]
+      { "key": "oxygen", "label": "💨 산소", "initial": 100 },
+      { "key": "hull", "label": "🛡️ 외벽", "initial": 100 }
+    ],
+    "theme": { "bg": "#050a0f", "btn": "#162b32", "text": "#89c4d7" }
   },
   "scenes": {
-    "hallway": {
-      "text": "당신은 어두운 저택의 복도에 서 있습니다. 뒤쪽 문은 잠겼고, 앞에는 거실로 이어지는 문과 지하실로 내려가는 계단이 있습니다.",
-      "image": "https://images.unsplash.com/photo-1505844839756-281a3df210e7?q=80&w=1000&auto=format&fit=crop",
+    "bridge": {
+      "text": "잠수함 브릿지에 경보가 울립니다. 외부 수압이 급증하고 있습니다. 산소가 희박해지기 전에 조치를 취해야 합니다.",
+      "image": "https://images.unsplash.com/photo-1508891015332-15f1638848d5?q=80&w=1000&auto=format&fit=crop",
+      "autoEvents": [
+        { "statKey": "oxygen", "threshold": 20, "chance": 100, "next": "game_over", "message": "산소 부족으로 정신을 잃었습니다..." }
+      ],
       "options": [
-        {
-          "text": "거실로 들어간다",
-          "next": "living_room",
-          "effects": { "sanity": -5 }
-        },
-        {
-          "text": "계단 아래 지하실을 살핀다",
-          "next": "basement",
-          "chance": 70
-        },
-        {
-          "text": "지하실 계단에서 발을 헛디딘다 (30% 확률로 발생)",
-          "next": "hallway",
-          "chance": 30,
-          "effects": { "hp": -20 }
-        }
+        { "text": "산소 탱크를 수리한다", "next": "bridge", "effects": { "oxygen": 30, "hull": -10 } },
+        { "text": "탈출 포트로 달려간다", "next": "escape", "requireItem": "카드키" },
+        { "text": "캐비닛을 뒤진다", "next": "bridge", "getItem": "카드키", "effects": { "oxygen": -10 } }
       ]
     },
-    "living_room": {
-      "text": "거실은 먼지로 가득합니다. 탁자 위에 낡은 '은색 열쇠'가 놓여 있습니다. 벽난로 근처에는 잠긴 금고가 보입니다.",
-      "image": "https://images.unsplash.com/photo-1513360335302-d8132f49b1ea?q=80&w=1000&auto=format&fit=crop",
-      "options": [
-        {
-          "text": "은색 열쇠를 챙긴다",
-          "next": "living_room",
-          "getItem": "은색열쇠"
-        },
-        {
-          "text": "열쇠로 금고를 연다",
-          "next": "ending",
-          "requireItem": "은색열쇠",
-          "useItem": "은색열쇠",
-          "effects": { "sanity": 20 }
-        },
-        {
-          "text": "복도로 돌아간다",
-          "next": "hallway"
-        }
-      ]
+    "escape": {
+      "text": "무사히 탈출 포트에 탑승했습니다! 수면 위로 떠오르며 당신은 안도의 한숨을 내쉽니다.",
+      "image": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1000&auto=format&fit=crop",
+      "options": [{ "text": "처음부터 다시", "next": "bridge" }]
     },
-    "basement": {
-      "text": "차갑고 습한 지하실입니다. 구석에 구급상자가 보이지만, 누군가 지켜보고 있는 것 같은 불길한 기분이 듭니다.",
-      "image": "https://images.unsplash.com/photo-1516053303024-40339a2b5bc5?q=80&w=1000&auto=format&fit=crop",
-      "options": [
-        {
-          "text": "구급상자를 사용한다 (HP 회복)",
-          "next": "hallway",
-          "effects": { "hp": 30, "sanity": -10 }
-        },
-        {
-          "text": "급히 다시 올라간다",
-          "next": "hallway"
-        }
-      ]
-    },
-    "ending": {
-      "text": "금고 안에는 저택의 탈출 지도와 보석이 들어있었습니다! 당신은 무사히 저택을 빠져나갔습니다. 축하합니다!",
-      "image": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1000&auto=format&fit=crop",
-      "options": [
-        {
-          "text": "처음부터 다시 하기",
-          "next": "hallway",
-          "effects": { "hp": 100, "sanity": 50 }
-        }
-      ]
+    "game_over": {
+      "text": "잠수함은 심해의 어둠 속으로 가라앉았습니다. [GAME OVER]",
+      "options": [{ "text": "재도전", "next": "bridge" }]
     }
   }
 }
-
