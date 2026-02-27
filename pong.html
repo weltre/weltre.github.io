@@ -1,0 +1,70 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>퐁 대결: 10점 선승제</title>
+<style>
+    body { background: #1a1a1a; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; }
+    .status { display: flex; gap: 40px; align-items: center; margin-top: 15px; }
+    .score { font-size: 45px; font-weight: bold; font-family: 'Courier New', monospace; color: #3498db; }
+    #timer { font-size: 28px; color: #f1c40f; }
+    canvas { border: 5px solid #fff; background: #000; margin-top: 15px; box-shadow: 0 0 30px rgba(52, 152, 219, 0.5); }
+    .info { margin-top: 15px; color: #888; font-size: 13px; text-align: center; }
+</style></head><body>
+<div class="status">
+    <div id="p1-score" class="score">0</div>
+    <div id="timer-area">잔여 시간: <span id="timer">180</span>초</div>
+    <div id="p2-score" class="score">0</div>
+</div>
+<canvas id="pong" width="700" height="450"></canvas>
+<div class="info">P1: W, S | P2: ↑, ↓ | 일시정지: Space (먼저 10점 획득 시 승리)</div>
+
+<script>
+    const cvs = document.getElementById("pong"), ctx = cvs.getContext("2d");
+    const p1s = document.getElementById("p1-score"), p2s = document.getElementById("p2-score"), tEl = document.getElementById("timer");
+    
+    let ball = { x: 350, y: 225, r: 8, vX: 5, vY: 5, speed: 6 };
+    let p1 = { x: 0, y: 175, w: 12, h: 100, score: 0 }, p2 = { x: 688, y: 175, w: 12, h: 100, score: 0 };
+    let keys = {}, timeLeft = 180, isPaused = false, gameOver = false;
+
+    window.onkeydown = (e) => { keys[e.key] = true; if(e.code === "Space") isPaused = !isPaused; };
+    window.onkeyup = (e) => keys[e.key] = false;
+
+    function resetBall() { ball.x = cvs.width/2; ball.y = cvs.height/2; ball.vX = -ball.vX; ball.speed = 6; }
+    function checkEnd() { 
+        if(p1.score >= 10 || p2.score >= 10 || timeLeft <= 0) {
+            gameOver = true;
+            alert(`게임 종료! 최종 스코어 ${p1.score}:${p2.score}`);
+            location.reload(); 
+        }
+    }
+
+    function update() {
+        if(isPaused || gameOver) return;
+        if(keys['w'] && p1.y > 0) p1.y -= 8; if(keys['s'] && p1.y < cvs.height - p1.h) p1.y += 8;
+        if(keys['ArrowUp'] && p2.y > 0) p2.y -= 8; if(keys['ArrowDown'] && p2.y < cvs.height - p2.h) p2.y += 8;
+
+        ball.x += ball.vX; ball.y += ball.vY;
+        if(ball.y + ball.r > cvs.height || ball.y - ball.r < 0) ball.vY = -ball.vY;
+
+        let player = (ball.x < cvs.width/2) ? p1 : p2;
+        if(ball.x + ball.r > player.x && ball.x - ball.r < player.x + player.w && ball.y + ball.r > player.y && ball.y - ball.r < player.y + player.h) {
+            let cp = (ball.y - (player.y + player.h/2)) / (player.h/2);
+            let dir = (ball.x < cvs.width/2) ? 1 : -1;
+            ball.vX = dir * ball.speed * Math.cos(cp * Math.PI/4);
+            ball.vY = ball.speed * Math.sin(cp * Math.PI/4);
+            ball.speed += 0.4;
+        }
+
+        if(ball.x < 0) { p2.score++; p2s.innerText = p2.score; resetBall(); checkEnd(); }
+        else if(ball.x > cvs.width) { p1.score++; p1s.innerText = p1.score; resetBall(); checkEnd(); }
+    }
+
+    function render() {
+        ctx.fillStyle = "#000"; ctx.fillRect(0, 0, cvs.width, cvs.height);
+        ctx.fillStyle = "#333"; ctx.fillRect(cvs.width/2-1, 0, 2, cvs.height);
+        ctx.fillStyle = "#fff"; ctx.fillRect(p1.x, p1.y, p1.w, p1.h); ctx.fillRect(p2.x, p2.y, p2.w, p2.h);
+        ctx.fillStyle = "#3498db"; ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2); ctx.fill();
+        if(isPaused) { ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(0,0,cvs.width,cvs.height); ctx.fillStyle="#fff"; ctx.font="30px Arial"; ctx.fillText("일시정지", 300, 230); }
+    }
+
+    setInterval(() => { if(!isPaused && !gameOver) { timeLeft--; tEl.innerText = timeLeft; if(timeLeft <= 0) checkEnd(); } }, 1000);
+    function loop() { update(); render(); requestAnimationFrame(loop); }
+    loop();
+</script></body></html>
