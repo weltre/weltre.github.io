@@ -1,32 +1,24 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Text Adventure Player</title>
+    <title>Adventure Player</title>
     <link rel="stylesheet" href="common.css">
     <style>
         .container { max-width: 700px; margin: 0 auto; padding: 40px 20px; }
         #status-bar { display: flex; gap: 20px; margin-bottom: 10px; font-weight: bold; color: var(--orange); }
         #inventory-bar { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #333; font-size: 0.9em; }
-        #scene-text { font-size: 1.25em; line-height: 1.8; min-height: 180px; white-space: pre-wrap; margin-bottom: 40px; }
-        .game-btn { 
-            display: block; width: 100%; padding: 18px; margin: 12px 0; 
-            background: var(--btn); color: var(--text); border: 1px solid #444; 
-            border-radius: 12px; cursor: pointer; text-align: left; 
-            opacity: 0; transition: 0.5s ease; font-size: 1.05em;
-        }
+        #scene-text { font-size: 1.2em; line-height: 1.8; min-height: 150px; white-space: pre-wrap; margin-bottom: 40px; }
+        .game-btn { display: block; width: 100%; padding: 18px; margin: 12px 0; background: var(--btn); color: var(--text); border: 1px solid #444; border-radius: 12px; cursor: pointer; text-align: left; opacity: 0; transition: 0.5s; font-size: 1.05em; }
         .game-btn.show { opacity: 1; }
     </style>
 </head>
 <body>
     <div class="container">
         <div id="load-screen">
-            <h1>🎮 게임 시작</h1>
-            <p>시나리오 JSON 파일을 불러오세요.</p>
+            <h1>🎮 게임 플레이어</h1>
             <input type="file" id="loader" accept=".json">
         </div>
-
         <div id="game-ui" style="display:none">
             <div id="status-bar"></div>
             <div id="inventory-bar">🎒 소지품: 없음</div>
@@ -56,6 +48,7 @@
     };
 
     function initGame() {
+        state.inventory.clear();
         scenario.config.stats.forEach(s => state.stats[s.key] = s.initial);
         renderNode(scenario.config.startNode);
     }
@@ -73,8 +66,6 @@
 
     function renderNode(nodeId) {
         const node = scenario.scenes[nodeId];
-        
-        // 자동 이벤트 체크 (사망 등 스탯 0 체크)
         if(node.autoEvents) {
             for(let ev of node.autoEvents) {
                 if(state.stats[ev.statKey] < ev.threshold && Math.random()*100 <= ev.chance) {
@@ -82,25 +73,17 @@
                 }
             }
         }
-
-        // UI 업데이트
         document.getElementById('status-bar').innerHTML = scenario.config.stats.map(s => `${s.label}: ${state.stats[s.key]}`).join(' | ');
         document.getElementById('inventory-bar').innerText = "🎒 소지품: " + (state.inventory.size ? Array.from(state.inventory).join(', ') : "없음");
         
         const box = document.getElementById('options-box');
         box.innerHTML = '';
-        
-        // 타이핑 효과
         const textEl = document.getElementById('scene-text');
         textEl.innerText = "";
         let i = 0;
         function type() {
-            if (i < node.text.length) {
-                textEl.innerText += node.text.charAt(i++);
-                setTimeout(type, 30);
-            } else {
-                renderOptions(node.options);
-            }
+            if (i < node.text.length) { textEl.innerText += node.text.charAt(i++); setTimeout(type, 20); } 
+            else { renderOptions(node.options); }
         }
         type();
     }
@@ -109,23 +92,20 @@
         const box = document.getElementById('options-box');
         options.forEach(opt => {
             if(opt.requireItem && !state.inventory.has(opt.requireItem)) return;
-            
             const btn = document.createElement('button');
             btn.className = 'game-btn';
             btn.innerText = opt.text;
             btn.onclick = () => {
                 if(opt.effects) Object.keys(opt.effects).forEach(k => state.stats[k] += opt.effects[k]);
                 if(opt.getItem) state.inventory.add(opt.getItem);
+                if(opt.removeItem) state.inventory.delete(opt.removeItem); // 아이템 소모 핵심 로직
                 
-                // 확률 결과 처리
                 if(opt.results && opt.results.length > 0) {
                     let roll = Math.random()*100, acc = 0, res = opt.results[0];
                     for(let r of opt.results) { acc += r.chance; if(roll <= acc) { res = r; break; } }
                     if(res.effects) Object.keys(res.effects).forEach(k => state.stats[k] += res.effects[k]);
                     showMsg(res.message, res.next);
-                } else {
-                    renderNode(opt.next);
-                }
+                } else { renderNode(opt.next); }
             };
             box.appendChild(btn);
             setTimeout(() => btn.classList.add('show'), 50);
@@ -134,3 +114,4 @@
 </script>
 </body>
 </html>
+
