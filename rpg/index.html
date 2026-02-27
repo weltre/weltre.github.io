@@ -1,321 +1,175 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<title>Story Engine</title>
-
+<meta charset="UTF-8" />
+<title>스토리 엔진 Maker / Player</title>
 <style>
-:root{
-  --bg:#0f1115; --card:#1a1d23; --text:#e0e0e0;
-  --point:#00d2ff; --sub:#ff9f43; --danger:#ff4757; --border:#333;
+:root {
+  --main:#00d2ff; --sub:#ff4757;
 }
-*{box-sizing:border-box}
-body{
-  margin:0; background:var(--bg); color:var(--text);
-  font-family:system-ui, sans-serif;
-}
-nav{
-  display:flex; align-items:center;
-  background:#15181c; border-bottom:1px solid var(--border);
-}
-.nav-btn{
-  padding:14px 18px; border:none; background:none;
-  color:#888; font-weight:700; cursor:pointer;
-}
-.nav-btn.active{
-  color:var(--point); border-bottom:3px solid var(--point);
-}
-.btn{padding:8px 12px;border:none;border-radius:6px;font-weight:600;cursor:pointer}
-.btn-blue{background:var(--point);color:#000}
-.btn-orange{background:var(--sub);color:#000}
-.btn-red{background:var(--danger);color:#fff}
-
-input,textarea,select{
-  width:100%; padding:8px;
-  background:#000; border:1px solid var(--border);
-  color:#fff; border-radius:5px;
-}
-
-.container{height:100vh;display:flex;flex-direction:column}
-.view{flex:1;display:none;overflow:hidden}
-
-.card{
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:10px;
-  padding:15px;
-  margin-bottom:15px;
-}
-.card-title{
-  font-weight:800; color:var(--point);
-  margin-bottom:10px;
-}
-.sub-card{
-  border:1px dashed #555;
-  border-radius:8px;
-  padding:10px;
-  margin-top:10px;
-}
-
-.row{display:flex;gap:8px}
-.row>div{flex:1}
-
-#maker{display:flex}
-#scene-list{
-  width:260px; border-right:1px solid var(--border);
-  padding:15px; overflow-y:auto;
-}
-.scene-btn{
-  padding:8px; margin-bottom:6px;
-  border:1px solid var(--border); border-radius:6px;
-  cursor:pointer;
-}
-.scene-btn.active{border-color:var(--point)}
-
-#editor{flex:1;padding:20px;overflow-y:auto}
-
-#player{
-  padding:20px; display:flex; flex-direction:column;
-}
-#status{color:var(--point);margin-bottom:8px}
-#inventory{color:var(--sub);margin-bottom:12px}
-#scene-text{white-space:pre-wrap;line-height:1.6;margin-bottom:15px}
-.option-btn{
-  width:100%; text-align:left;
-  padding:14px; margin-bottom:8px;
-  background:var(--card); color:#fff;
-  border:1px solid var(--border);
-  border-left:4px solid var(--point);
-}
-.option-btn:disabled{opacity:.4}
-
-#msg{
-  position:fixed; inset:0;
-  display:none; align-items:center; justify-content:center;
-  background:rgba(0,0,0,.6);
-}
-#msg-box{
-  background:var(--card);
-  padding:20px; border-radius:10px;
-  max-width:420px;
-}
+body { margin:0; font-family:system-ui; background:#111; color:#eee; }
+header { padding:10px; background:#000; display:flex; gap:10px; align-items:center; }
+button { padding:6px 12px; border:0; border-radius:4px; cursor:pointer; }
+.primary { background:var(--main); color:#000; }
+.danger { background:var(--sub); color:#fff; }
+input, textarea { width:100%; background:#222; color:#fff; border:1px solid #444; border-radius:4px; padding:4px; }
+.card { border:1px solid #333; border-radius:6px; padding:8px; margin-bottom:8px; background:#1a1a1a; }
+.card h3 { margin:4px 0; }
+.flex { display:flex; gap:6px; flex-wrap:wrap; }
+#maker, #player { padding:10px; }
+.hidden { display:none; }
+.hud { display:flex; gap:10px; background:#000; padding:6px; }
+.hud span { padding:4px 8px; background:#222; border-radius:4px; }
+.option-btn { display:block; width:100%; margin:4px 0; }
+.disabled { opacity:.4; pointer-events:none; }
 </style>
 </head>
-
 <body>
-<div class="container">
 
-<nav>
-  <button class="nav-btn active" onclick="switchTab('maker')">MAKER</button>
-  <button class="nav-btn" onclick="switchTab('player')" id="playBtn">PLAY</button>
+<header>
+  <strong>스토리 엔진</strong>
+  <input type="file" id="loadJson" />
+  <button class="primary" id="playBtn" disabled>▶ 플레이</button>
+  <button class="danger" id="backMaker" class="hidden">Maker로</button>
+</header>
 
-  <div style="margin-left:auto;padding:8px;display:flex;gap:6px">
-    <input type="file" id="loader" style="display:none" onchange="loadJSON(event)">
-    <button class="btn-orange" onclick="document.getElementById('loader').click()">LOAD</button>
-    <button class="btn-orange" onclick="saveJSON()">SAVE</button>
-  </div>
-</nav>
-
-<!-- MAKER -->
-<div id="maker" class="view" style="display:flex">
-  <div id="scene-list">
-    <button class="btn-blue" style="width:100%" onclick="addScene()">+ Scene</button>
-    <div id="sceneBtns"></div>
-  </div>
-  <div id="editor"></div>
-</div>
-
-<!-- PLAYER -->
-<div id="player" class="view">
-  <div id="status"></div>
-  <div id="inventory"></div>
-  <div id="scene-text"></div>
-  <div id="options"></div>
-</div>
-
-</div>
-
-<div id="msg">
-  <div id="msg-box">
-    <div id="msg-text"></div>
-    <button class="btn-blue" style="width:100%;margin-top:10px" onclick="closeMsg()">확인</button>
-  </div>
-</div>
+<div id="maker"></div>
+<div id="player" class="hidden"></div>
 
 <script>
-/* ================= DATA ================= */
-let sc={
-  config:{
-    title:"예제 게임",
-    themeColor:"#00d2ff",
-    subColor:"#ff9f43",
-    startNode:"start",
-    stats:[
-      {key:"hp",label:"체력",initial:100}
-    ]
-  },
-  scenes:{
-    start:{
-      text:"시작 장면입니다.",
-      options:[
-        {text:"다음으로",next:"end"}
-      ]
-    },
-    end:{
-      text:"끝입니다.",
-      options:[{text:"리셋",isReset:true}]
-    }
-  }
+let data=null, errors=[];
+let state={};
+
+document.getElementById('loadJson').onchange=e=>{
+  const f=e.target.files[0];
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      data=JSON.parse(r.result);
+      validate();
+      renderMaker();
+    }catch(err){ alert("JSON 오류"); }
+  };
+  r.readAsText(f);
 };
 
-let curScene="start";
-let state={stats:{},inv:new Set(),clicks:{}};
-
-/* ================= TABS ================= */
-function switchTab(t){
-  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
-  document.querySelector(`.nav-btn[onclick*="${t}"]`).classList.add("active");
-  document.querySelectorAll(".view").forEach(v=>v.style.display="none");
-  document.getElementById(t).style.display="flex";
-  if(t==="player") startPlay();
-}
-
-/* ================= MAKER ================= */
-function addScene(){
-  let id="scene_"+Date.now();
-  sc.scenes[id]={text:"",options:[]};
-  curScene=id;
-  renderMaker();
+function validate(){
+  errors=[];
+  if(!data.config?.startNode || !data.scenes[data.config.startNode])
+    errors.push("startNode 오류");
+  data.config.stats.forEach(s=>{
+    if(!s.key) errors.push("스탯 key 누락");
+  });
+  document.getElementById('playBtn').disabled=errors.length>0;
 }
 
 function renderMaker(){
-  // scene list
-  let list=document.getElementById("sceneBtns");
-  list.innerHTML="";
-  Object.keys(sc.scenes).forEach(id=>{
-    let d=document.createElement("div");
-    d.className="scene-btn"+(id===curScene?" active":"");
-    d.innerText=id;
-    d.onclick=()=>{curScene=id;renderMaker()};
-    list.appendChild(d);
+  const m=document.getElementById('maker');
+  m.innerHTML="";
+  const cfg=document.createElement('div');
+  cfg.className="card";
+  cfg.innerHTML=`<h3>전역 설정</h3>
+  <div>제목: ${data.config.title}</div>
+  <div>시작 노드: ${data.config.startNode}</div>`;
+  m.appendChild(cfg);
+
+  Object.entries(data.scenes).forEach(([id,sc])=>{
+    const c=document.createElement('div');
+    c.className="card";
+    c.innerHTML=`<h3>Scene: ${id}</h3><div>${sc.text}</div>`;
+    m.appendChild(c);
   });
-
-  let s=sc.scenes[curScene];
-  let ed=document.getElementById("editor");
-
-  ed.innerHTML=`
-  <div class="card">
-    <div class="card-title">Global Config</div>
-    <label>Title</label>
-    <input value="${sc.config.title}" oninput="sc.config.title=this.value">
-    <label>Start Node</label>
-    <select onchange="sc.config.startNode=this.value">
-      ${Object.keys(sc.scenes).map(id=>`
-        <option value="${id}" ${id===sc.config.startNode?"selected":""}>${id}</option>
-      `).join("")}
-    </select>
-  </div>
-
-  <div class="card">
-    <div class="card-title">Scene : ${curScene}</div>
-    <label>Text</label>
-    <textarea rows="4" oninput="s.text=this.value">${s.text}</textarea>
-  </div>
-
-  <div class="card">
-    <div class="card-title">Options</div>
-    ${(s.options||[]).map((o,i)=>`
-      <div class="sub-card">
-        <label>Text</label>
-        <input value="${o.text||""}" oninput="s.options[${i}].text=this.value">
-
-        <div class="row">
-          <div>
-            <label>Next</label>
-            <input value="${o.next||""}" oninput="s.options[${i}].next=this.value">
-          </div>
-          <div>
-            <label>Require Item</label>
-            <input value="${o.requireItem||""}" oninput="s.options[${i}].requireItem=this.value">
-          </div>
-        </div>
-
-        <label><input type="checkbox" ${o.isReset?"checked":""}
-          onchange="s.options[${i}].isReset=this.checked"> Reset</label>
-
-        <button class="btn-red" onclick="s.options.splice(${i},1);renderMaker()">삭제</button>
-      </div>
-    `).join("")}
-    <button class="btn-blue" onclick="s.options.push({text:'선택지',next:curScene});renderMaker()">+ Option</button>
-  </div>
-  `;
 }
 
-/* ================= PLAYER ================= */
-function startPlay(){
-  state.inv.clear();
-  state.clicks={};
+document.getElementById('playBtn').onclick=()=>{
+  initPlayer();
+  document.getElementById('maker').classList.add('hidden');
+  document.getElementById('player').classList.remove('hidden');
+};
+
+document.getElementById('backMaker').onclick=()=>{
+  document.getElementById('player').classList.add('hidden');
+  document.getElementById('maker').classList.remove('hidden');
+};
+
+function initPlayer(){
   state.stats={};
-  sc.config.stats.forEach(st=>state.stats[st.key]=st.initial);
-  renderScene(sc.config.startNode);
+  state.items=[];
+  data.config.stats.forEach(s=>state.stats[s.key]=s.initial);
+  go(data.config.startNode);
 }
 
-function renderScene(id){
-  let s=sc.scenes[id];
-  if(!s)return;
+function go(id){
+  const p=document.getElementById('player');
+  p.innerHTML="";
+  const sc=data.scenes[id];
 
-  document.getElementById("scene-text").innerText=s.text;
-  document.getElementById("status").innerText=
-    sc.config.stats.map(st=>`${st.label}: ${state.stats[st.key]}`).join(" | ");
-  document.getElementById("inventory").innerText=
-    "아이템: "+(state.inv.size?[...state.inv].join(", "):"없음");
+  const hud=document.createElement('div');
+  hud.className="hud";
+  Object.entries(state.stats).forEach(([k,v])=>{
+    const sp=document.createElement('span');
+    sp.textContent=`${k}: ${v}`;
+    hud.appendChild(sp);
+  });
+  p.appendChild(hud);
 
-  let box=document.getElementById("options");
-  box.innerHTML="";
+  const txt=document.createElement('div');
+  txt.className="card";
+  txt.textContent=sc.text;
+  p.appendChild(txt);
 
-  (s.options||[]).forEach((o,i)=>{
-    let b=document.createElement("button");
-    b.className="option-btn";
-    b.innerText=o.text;
-
-    if(o.requireItem && !state.inv.has(o.requireItem)){
-      b.disabled=true;
-      b.innerText+=" (필요: "+o.requireItem+")";
+  (sc.autoEvents||[]).forEach(a=>{
+    if(state.stats[a.statKey]<a.threshold){
+      alert(a.message);
+      go(a.next);
+      return;
     }
+  });
 
+  sc.options.forEach(op=>{
+    const b=document.createElement('button');
+    b.className="option-btn";
+    b.textContent=op.text;
+    if(op.requireItem && !state.items.includes(op.requireItem)){
+      b.classList.add('disabled');
+      b.title="아이템 필요";
+    }
     b.onclick=()=>{
-      if(o.isReset) return startPlay();
-      renderScene(o.next||id);
+      if(op.effects){
+        Object.entries(op.effects).forEach(([k,v])=>state.stats[k]+=v);
+      }
+      if(op.getItem){
+        op.getItem.split(',').forEach(i=>state.items.push(i.trim()));
+      }
+      if(op.consumeItem){
+        op.consumeItem.split(',').forEach(i=>{
+          const idx=state.items.indexOf(i.trim());
+          if(idx>-1) state.items.splice(idx,1);
+        });
+      }
+      if(op.results){
+        let r=Math.random()*100, acc=0;
+        for(const res of op.results){
+          acc+=res.chance;
+          if(r<=acc){
+            if(res.message) alert(res.message);
+            if(res.effects){
+              Object.entries(res.effects).forEach(([k,v])=>state.stats[k]+=v);
+            }
+            if(res.getItem){
+              res.getItem.split(',').forEach(i=>state.items.push(i.trim()));
+            }
+            go(res.next);
+            return;
+          }
+        }
+      }
+      if(op.isReset){ initPlayer(); return; }
+      if(op.next) go(op.next);
     };
-
-    box.appendChild(b);
+    p.appendChild(b);
   });
 }
-
-/* ================= LOAD / SAVE ================= */
-function saveJSON(){
-  let a=document.createElement("a");
-  a.href=URL.createObjectURL(new Blob([JSON.stringify(sc,null,2)]));
-  a.download="scenario.json";
-  a.click();
-}
-function loadJSON(e){
-  let r=new FileReader();
-  r.onload=ev=>{
-    sc=JSON.parse(ev.target.result);
-    curScene=sc.config.startNode;
-    renderMaker();
-  };
-  r.readAsText(e.target.files[0]);
-}
-
-/* ================= MSG ================= */
-function closeMsg(){
-  document.getElementById("msg").style.display="none";
-}
-
-/* init */
-renderMaker();
 </script>
 </body>
 </html>
