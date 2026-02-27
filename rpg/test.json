@@ -1,92 +1,64 @@
 {
   "config": {
-    "title": "유령 함선: 오리온의 침묵",
-    "startNode": "bridge_start",
-    "themeColor": "#00ffcc",
+    "title": "프로젝트 레비아탄: 디렉터스 컷",
+    "startNode": "room_start",
+    "themeColor": "#e67e22",
     "stats": [
-      { "key": "hp", "label": "🩸 생존 수치", "initial": 50 },
-      { "key": "mental", "label": "🧠 정신력", "initial": 40 },
-      { "key": "power", "label": "⚡ 함선 전력", "initial": 20 }
+      { "key": "hp", "label": "❤️ 체력", "initial": 20 },
+      { "key": "oxy", "label": "💨 산소", "initial": 30 },
+      { "key": "power", "label": "⚡ 전력", "initial": 10 }
     ]
   },
   "scenes": {
-    "bridge_start": {
-      "text": "[함교]\n당신은 버려진 채 표류하던 탐사선 '오리온 호'의 함교에서 깨어났습니다. \n경고등이 붉게 깜빡이며, 산소 재순환 장치가 멈추기 일보 직전입니다.\n바닥에는 '엔지니어의 가방'과 '보안 키카드'가 떨어져 있습니다.",
+    "room_start": {
+      "text": "[개인 침실]\n기지가 침수되고 있습니다. 산소 공급 장치가 가동을 멈췄습니다.\n방 안에는 긴급 보급 상자와 손상된 태블릿이 있습니다.",
       "autoEvents": [
-        { "statKey": "hp", "threshold": 1, "next": "death_void", "message": "신체 기능이 정지되었습니다. 당신의 몸은 영원히 우주를 표류합니다." },
-        { "statKey": "mental", "threshold": 1, "next": "death_madness", "message": "공포가 이성을 집어삼켰습니다. 당신은 스스로 에어락을 열었습니다." }
+        { "statKey": "oxy", "threshold": 1, "next": "death_oxy", "message": "숨이 막혀 의식을 잃었습니다..." }
       ],
       "options": [
-        { "text": "엔지니어 가방을 챙긴다", "getItem": "멀티툴", "next": "bridge_start" },
-        { "text": "보안 키카드를 챙긴다", "getItem": "키카드", "next": "bridge_start" },
-        { "text": "중앙 통로로 나간다", "next": "main_hub", "effects": { "mental": -5 } }
+        { "text": "보급 상자를 뒤진다 (최대 1회)", "maxClicks": 1, "results": [
+          { "chance": 100, "message": "산소캔과 손전등을 찾았습니다!", "getItem": "산소캔", "effects": { "oxy": 10 } }
+        ]},
+        { "text": "태블릿의 로그를 읽는다 (정신 집중)", "effects": { "oxy": -5 }, "next": "room_start", "message": "기지의 폐쇄 프로토콜에 대한 정보를 얻었습니다." },
+        { "text": "복도로 나간다", "next": "hallway", "effects": { "oxy": -5 } }
       ]
     },
-    "main_hub": {
-      "text": "[중앙 허브]\n기괴한 쇳소리가 사방에서 들려옵니다. 복도는 세 갈래로 나뉩니다.\n왼쪽은 엔진실, 오른쪽은 거주 구역, 앞쪽은 무기고입니다.",
+    "hallway": {
+      "text": "[메인 복도]\n어둠이 깔린 복도입니다. 전력이 부족해 전등이 깜빡입니다.\n엔진실로 가서 전력을 복구해야 다른 구역으로 이동할 수 있을 것 같습니다.",
       "options": [
-        { "text": "엔진실로 향한다 (전력 필요)", "next": "engine_room", "effects": { "hp": -5 } },
-        { "text": "거주 구역으로 향한다 (정신력 회복 기대)", "next": "living_quarters", "effects": { "mental": -5 } },
-        { "text": "무기고로 향한다 (키카드 필요)", "requireItem": "키카드", "next": "armory" },
-        { "text": "함교로 돌아간다", "next": "bridge_start" }
+        { "text": "산소캔을 사용한다 (산소 +20)", "requireItem": "산소캔", "removeItem": "산소캔", "effects": { "oxy": 20 }, "next": "hallway" },
+        { "text": "엔진실(Engine Room)로 이동", "next": "engine_room", "effects": { "oxy": -5 } },
+        { "text": "중앙 창고로 이동 (전력 15 필요)", "next": "storage", "effects": { "power": -15, "oxy": -5 } }
       ]
     },
     "engine_room": {
-      "text": "[엔진실]\n거대한 원자로가 불규칙하게 맥동하고 있습니다. 멀티툴이 있다면 전력을 복구할 수 있을 것 같습니다.",
+      "text": "[엔진실]\n메인 발전기가 멈춰 있습니다. 수리하려면 도구가 필요해 보입니다.\n주변에 '낡은 렌치'가 굴러다닙니다.",
       "options": [
-        { "text": "멀티툴로 원자로를 수리한다", "requireItem": "멀티툴", "results": [
-          { "chance": 80, "next": "engine_room", "message": "수리에 성공했습니다! 함선의 조명이 밝아집니다.", "effects": { "power": 50 } },
-          { "chance": 20, "next": "engine_room", "message": "과부하로 인해 가벼운 화상을 입었습니다.", "effects": { "hp": -10, "power": 10 } }
+        { "text": "낡은 렌치를 줍는다", "getItem": "렌치", "maxClicks": 1, "next": "engine_room" },
+        { "text": "발전기를 수리한다 (렌치 필요)", "requireItem": "렌치", "results": [
+          { "chance": 70, "message": "발전기가 가동됩니다! 전력이 충전됩니다.", "effects": { "power": 50 } },
+          { "chance": 30, "message": "수리 도중 스파크가 튀어 다쳤습니다.", "effects": { "hp": -10, "power": 10 } }
+        ], "next": "engine_room" },
+        { "text": "복도로 돌아간다", "next": "hallway" }
+      ]
+    },
+    "storage": {
+      "text": "[중앙 창고]\n밝은 조명이 켜진 창고입니다. 이곳에는 탈출용 잠수정이 있습니다.\n하지만 잠수정 입구가 단단히 잠겨 있습니다.",
+      "options": [
+        { "text": "잠수정을 억지로 연다 (체력 소모)", "effects": { "hp": -10, "oxy": -5 }, "results": [
+          { "chance": 40, "message": "성공! 잠수정 내부로 진입합니다.", "next": "ending_win" },
+          { "chance": 60, "message": "문은 꿈쩍도 하지 않고 몸만 상했습니다.", "next": "storage" }
         ]},
-        { "text": "맨손으로 조작해본다", "results": [
-          { "chance": 30, "next": "engine_room", "message": "운 좋게 전력이 일부 복구되었습니다.", "effects": { "power": 20 } },
-          { "chance": 70, "next": "death_shock", "message": "고압 전류가 온몸을 관통했습니다.", "effects": { "hp": -100 } }
-        ]},
-        { "text": "허브로 돌아간다", "next": "main_hub" }
+        { "text": "복도로 돌아간다", "next": "hallway" }
       ]
     },
-    "living_quarters": {
-      "text": "[거주 구역]\n승무원들의 유품이 널브러져 있습니다. 이곳에서 '식량 팩'과 '일기장'을 발견했습니다.",
-      "options": [
-        { "text": "식량 팩을 먹는다 (+20 생존)", "getItem": "식량 팩", "next": "living_quarters" },
-        { "text": "식량 팩 사용", "requireItem": "식량 팩", "removeItem": "식량 팩", "effects": { "hp": 20 }, "next": "living_quarters" },
-        { "text": "일기장을 읽어본다 (+10 정신력)", "results": [
-          { "chance": 100, "next": "living_quarters", "message": "가족을 그리워하는 글귀에 마음이 다소 진정됩니다.", "effects": { "mental": 10 } }
-        ]},
-        { "text": "허브로 돌아간다", "next": "main_hub" }
-      ]
+    "ending_win": {
+      "text": "잠수정의 엔진이 부드럽게 돌아가며 심해 기지를 탈출합니다.\n햇살이 비치는 수면이 보이기 시작합니다.\n[HAPPY ENDING: 심해의 탈출자]",
+      "options": [{ "text": "처음부터 다시", "isReset": true, "next": "room_start" }]
     },
-    "armory": {
-      "text": "[무기고]\n강화 유리 너머로 '전자기 소총'이 보입니다. 전력이 충분하다면 잠금을 해제할 수 있습니다.",
-      "options": [
-        { "text": "전력을 소모해 잠금을 해제한다", "requireItem": "키카드", "results": [
-          { "chance": 100, "next": "armory", "message": "무기고가 개방되었습니다!", "effects": { "power": -20 }, "getItem": "전자기 소총" }
-        ], "requirePower": 20 },
-        { "text": "총을 챙겨 탈출 포트로 향한다", "requireItem": "전자기 소총", "next": "escape_pod" },
-        { "text": "허브로 돌아간다", "next": "main_hub" }
-      ]
-    },
-    "escape_pod": {
-      "text": "[탈출 포트]\n마침내 탈출 포트에 도달했습니다! 하지만 외계 생명체가 앞을 막아섭니다.\n전자기 소총이 있다면 처치할 수 있습니다.",
-      "options": [
-        { "text": "전자기 소총으로 대응한다", "requireItem": "전자기 소총", "next": "ending_hero", "message": "괴물을 순식간에 재로 만들어버리고 포트에 올라탑니다." },
-        { "text": "맨몸으로 뚫고 지나간다", "results": [
-          { "chance": 10, "next": "ending_lucky", "message": "죽기 살기로 달려 포트에 간신히 몸을 던졌습니다!" },
-          { "chance": 90, "next": "death_alien", "message": "괴물의 날카로운 발톱이 등을 꿰뚫었습니다." }
-        ]}
-      ]
-    },
-    "ending_hero": {
-      "text": "오리온 호의 위협을 제거하고 무사히 구조 신호를 보냈습니다. 당신은 영웅입니다.\n[TRUE ENDING: 오리온의 정복자]",
-      "options": [{ "text": "다시 시작하기", "next": "bridge_start", "isReset": true }]
-    },
-    "ending_lucky": {
-      "text": "만신창이가 된 채 지구로 돌아왔습니다. 당신은 살았지만, 오리온 호의 비밀은 영원히 묻혔습니다.\n[NORMAL ENDING: 생존자]",
-      "options": [{ "text": "다시 시작하기", "next": "bridge_start", "isReset": true }]
-    },
-    "death_void": { "text": "생명 유지 장치가 정지되었습니다...\n[GAME OVER]", "options": [{ "text": "재도전", "next": "bridge_start", "isReset": true }] },
-    "death_madness": { "text": "어둠 속에서 들리는 환청이 당신을 미치게 했습니다.\n[GAME OVER]", "options": [{ "text": "재도전", "next": "bridge_start", "isReset": true }] },
-    "death_shock": { "text": "엔진의 과부하 전압이 심장을 멈췄습니다.\n[GAME OVER]", "options": [{ "text": "재도전", "next": "bridge_start", "isReset": true }] },
-    "death_alien": { "text": "외계 생명체의 먹잇감이 되었습니다.\n[GAME OVER]", "options": [{ "text": "재도전", "next": "bridge_start", "isReset": true }] }
+    "death_oxy": {
+      "text": "산소가 고갈되어 차가운 바닥에 쓰러졌습니다.\n[GAME OVER]",
+      "options": [{ "text": "재도전", "isReset": true, "next": "room_start" }]
+    }
   }
 }
