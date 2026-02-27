@@ -1,94 +1,55 @@
-<!DOCTYPE html><html><head><meta charset="UTF-8"><title>전통 바둑 스튜디오</title>
-<style>
-    :root { --bg: #1a1a1a; --card: #2d2d2d; --accent: #3498db; --danger: #e74c3c; }
-    body { background: var(--bg); color: #fff; font-family: 'Malgun Gothic', sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; }
-    .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
-    button { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; background: var(--card); color: #ccc; }
-    button.active { background: var(--accent); color: #fff; }
-    .scoreboard { display: flex; gap: 40px; background: var(--card); padding: 15px 40px; border-radius: 15px; margin-bottom: 20px; align-items: center; }
-    .player { display: flex; flex-direction: column; align-items: center; opacity: 0.3; transition: 0.3s; min-width: 80px; }
-    .player.active { opacity: 1; color: var(--accent); transform: scale(1.1); }
-    .timer-center { text-align: center; min-width: 100px; }
-    #timer-display { font-size: 32px; font-weight: bold; }
-    #timer-display.low { color: var(--danger); }
-    canvas { border: 5px solid #34495e; border-radius: 8px; box-shadow: 0 10px 40px #000; cursor: pointer; }
-    .desc { margin-top: 15px; color: #aaa; font-size: 13px; text-align: center; }
-    .othello-count { font-size: 20px; font-weight: bold; margin-top: 5px; color: #fff; }
-</style></head><body>
-<div class="btn-group">
-    <button id="btn-omok" onclick="initGame('omok')">오목 대국</button>
-    <button id="btn-othello" onclick="initGame('othello')">오셀로 대국</button>
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>오목 & 오셀로</title>
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="container">
+    <div style="margin-bottom:15px;"><button id="btn-omok" onclick="initGame('omok')">오목</button> <button id="btn-othello" onclick="initGame('othello')">오셀로</button></div>
+    <div class="status-bar">
+        <div id="p1-area" class="player">흑돌<div id="p1-c" style="font-size:20px"></div></div>
+        <div id="timer" style="font-size:30px; color:var(--timer); font-weight:bold;">60</div>
+        <div id="p2-area" class="player">백돌<div id="p2-c" style="font-size:20px"></div></div>
+    </div>
+    <canvas id="board" width="560" height="560"></canvas>
+    <div style="margin-top:15px;"><button onclick="undo()" style="background:var(--danger)">무르기</button> <button onclick="location.href='index.html'">목록으로</button></div>
 </div>
-<div class="scoreboard">
-    <div id="p1-area" class="player"><span>흑돌</span><div id="p1-count" class="othello-count"></div></div>
-    <div class="timer-center"><div id="timer-display">60</div><button onclick="togglePause()" id="pause-btn" style="font-size:11px;margin-top:5px;padding:3px 8px">일시정지</button></div>
-    <div id="p2-area" class="player"><span>백돌</span><div id="p2-count" class="othello-count"></div></div>
-</div>
-<canvas id="board" width="560" height="560"></canvas>
-<div style="margin-top:20px;display:flex;gap:10px;">
-    <button onclick="undo()" style="background:var(--danger);color:#fff">한 수 무르기</button>
-    <button onclick="initGame(mode)" style="background:#444;color:#fff">판 초기화</button>
-</div>
-<div class="desc">가로, 세로, 대각선 중 먼저 5알을 놓으면 승리합니다.</div>
-
 <script>
-    const canvas=document.getElementById('board'), ctx=canvas.getContext('2d'), timerEl=document.getElementById('timer-display');
-    let mode='', size=0, cellSize=0, board=[], turn=1, history=[], lastMove=null, timeLeft=60, timerInterval=null, isPaused=false;
-
-    function initGame(m) {
-        clearInterval(timerInterval); mode=m; turn=1; history=[]; lastMove=null; isPaused=false;
-        size=(m==='omok')?15:8; cellSize=canvas.width/size;
-        document.querySelectorAll('.btn-group button').forEach(b=>b.classList.remove('active'));
-        document.getElementById(`btn-${m}`).classList.add('active');
+    const cvs=document.getElementById('board'), ctx=cvs.getContext('2d'), tEl=document.getElementById('timer');
+    let mode='', size, cellSize, board, turn=1, history=[], lastMove=null, timeLeft=60, timerInt;
+    function initGame(m){
+        mode=m; turn=1; history=[]; lastMove=null; size=(m==='omok')?15:8; cellSize=560/size;
         board=Array.from({length:size},()=>Array(size).fill(0));
         if(m==='othello'){let mid=size/2; board[mid-1][mid-1]=board[mid][mid]=2; board[mid-1][mid]=board[mid][mid-1]=1;}
-        resetTimer(); updateUI();
+        resetT(); updateUI();
     }
-    function resetTimer() { clearInterval(timerInterval); timeLeft=60; isPaused=false; timerEl.classList.remove('low'); startTimer(); }
-    function startTimer() { timerInterval=setInterval(()=>{if(!isPaused){timeLeft--; timerEl.innerText=timeLeft; if(timeLeft<=10)timerEl.classList.add('low'); if(timeLeft<=0){alert("시간초과! 차례가 넘어갑니다."); changeTurn();}}},1000);}
-    function togglePause() { isPaused=!isPaused; document.getElementById('pause-btn').innerText=isPaused?"재개":"일시정지"; canvas.style.opacity=isPaused?0.3:1; canvas.style.pointerEvents=isPaused?"none":"auto";}
-    function changeTurn() { turn=3-turn; if(mode==='othello')checkPass(); resetTimer(); updateUI(); }
-    function undo() { if(history.length>0&&!isPaused){let p=history.pop(); board=p.board; turn=p.turn; lastMove=p.lastMove; resetTimer(); updateUI();} }
-
-    canvas.onclick = (e) => {
-        if(isPaused)return; const x=Math.floor(e.offsetX/cellSize), y=Math.floor(e.offsetY/cellSize); if(board[y][x]!==0)return;
+    function resetT(){ clearInterval(timerInt); timeLeft=60; tEl.innerText=timeLeft; timerInt=setInterval(()=>{timeLeft--; tEl.innerText=timeLeft; if(timeLeft<=0)changeT();},1000); }
+    function changeT(){ turn=3-turn; if(mode==='othello'&&!canM(turn)) { turn=3-turn; if(!canM(turn)) endG(); } resetT(); updateUI(); }
+    function endG(){ let s=getS(); alert(`종료! 흑:${s.p1} 백:${s.p2}`); initGame(mode); }
+    function undo(){ if(history.length>0){ let p=history.pop(); board=p.board; turn=p.turn; lastMove=p.lastMove; updateUI(); } }
+    cvs.onclick=(e)=>{
+        const x=Math.floor(e.offsetX/cellSize), y=Math.floor(e.offsetY/cellSize); if(board[y][x]!==0)return;
         if(mode==='omok'){
             history.push({board:board.map(r=>[...r]),turn,lastMove}); board[y][x]=turn; lastMove={x,y};
-            if(checkWin(y,x)){ render(); clearInterval(timerInterval); setTimeout(()=>{alert(`${turn==1?'흑':'백'} 승리!`); initGame('omok')},50); return; }
-            changeTurn();
-        } else if(flip(y,x,turn,true)){ history.push({board:board.map(r=>[...r]),turn,lastMove}); lastMove={x,y}; changeTurn(); }
+            if(checkW(y,x)){ render(); setTimeout(()=>{alert((turn==1?'흑':'백')+' 승리!'); initGame('omok')},50); return; }
+            changeT();
+        } else if(flip(y,x,turn,true)){ history.push({board:board.map(r=>[...r]),turn,lastMove}); lastMove={x,y}; changeT(); }
     };
-
-    function checkWin(y,x){
-        return [[1,0],[0,1],[1,1],[1,-1]].some(([dy,dx])=>{
-            let c=1; [[1,1],[-1,-1]].forEach(([s])=>{ for(let i=1;i<6;i++)if(board[y+dy*i*s]?.[x+dx*i*s]===turn)c++; else break; });
-            return c>=5; // 렌주룰 제거: 5개 이상이면 무조건 승리
-        });
-    }
-
-    function render() {
-        let g=ctx.createLinearGradient(0,0,560,560); g.addColorStop(0,mode==='omok'?'#e3c17a':'#2c7a3d'); g.addColorStop(1,mode==='omok'?'#cdaa5b':'#1e5a2d');
-        ctx.fillStyle=g; ctx.fillRect(0,0,560,560); ctx.strokeStyle="rgba(0,0,0,0.15)";
-        for(let i=0;i<=size;i++){ctx.beginPath();ctx.moveTo(i*cellSize,0);ctx.lineTo(i*cellSize,560);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i*cellSize);ctx.lineTo(560,i*cellSize);ctx.stroke();}
-        board.forEach((r,y)=>r.forEach((v,x)=>{ if(v==0)return; let cx=x*cellSize+cellSize/2, cy=y*cellSize+cellSize/2, rd=cellSize*0.42;
-            ctx.shadowBlur=5; ctx.shadowColor="rgba(0,0,0,0.4)"; ctx.beginPath(); ctx.arc(cx,cy,rd,0,Math.PI*2);
-            let stl=ctx.createRadialGradient(cx-rd/3,cy-rd/3,rd/10,cx,cy,rd);
-            if(v==1){stl.addColorStop(0,"#444"); stl.addColorStop(1,"#000");}else{stl.addColorStop(0,"#fff"); stl.addColorStop(1,"#ddd");}
-            ctx.fillStyle=stl; ctx.fill(); ctx.shadowBlur=0;
-            if(lastMove&&lastMove.x==x&&lastMove.y==y){ctx.fillStyle="#e74c3c";ctx.beginPath();ctx.arc(cx,cy,4,0,Math.PI*2);ctx.fill();}
-        }));
-    }
-    function checkPass() { if(!canMove(turn)){ turn=3-turn; if(!canMove(turn)){ let s=getS(); alert(`종료! 흑:${s.p1} 백:${s.p2}`); initGame('othello'); }else alert("패스!"); } }
-    function canMove(p){for(let y=0;y<size;y++)for(let x=0;x<size;x++)if(board[y][x]==0&&flip(y,x,p,false))return true; return false;}
-    function flip(y,x,p,f){ let s=false, ds=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]; ds.forEach(([dy,dx])=>{ let ty=y+dy,tx=x+dx,m=[]; while(board[ty]?.[tx]===3-p){m.push([ty,tx]);ty+=dy;tx+=dx;} if(board[ty]?.[tx]===p&&m.length>0){if(f){m.forEach(([ry,rx])=>board[ry][rx]=p);board[y][x]=p;} s=true;} }); return s; }
+    function checkW(y,x){ return [[1,0],[0,1],[1,1],[1,-1]].some(([dy,dx])=>{ let c=1; [[1,1],[-1,-1]].forEach(([s])=>{for(let i=1;i<6;i++)if(board[y+dy*i*s]?.[x+dx*i*s]===turn)c++;else break;}); return c>=5; }); }
+    function canM(p){ for(let y=0;y<size;y++)for(let x=0;x<size;x++)if(board[y][x]==0&&flip(y,x,p,false))return true; return false; }
+    function flip(y,x,p,f){ let s=false; [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]].forEach(([dy,dx])=>{ let ty=y+dy,tx=x+dx,m=[]; while(board[ty]?.[tx]===3-p){m.push([ty,tx]);ty+=dy;tx+=dx;} if(board[ty]?.[tx]===p&&m.length>0){if(f){m.forEach(([ry,rx])=>board[ry][rx]=p);board[y][x]=p;} s=true;} }); return s; }
     function getS(){ let p1=0,p2=0; board.flat().forEach(v=>{if(v==1)p1++;if(v==2)p2++;}); return {p1,p2}; }
     function updateUI(){
-        document.getElementById('p1-area').classList.toggle('active',turn==1);
-        document.getElementById('p2-area').classList.toggle('active',turn==2);
-        let s=getS();
-        document.getElementById('p1-count').innerText=mode==='othello'?s.p1:'';
-        document.getElementById('p2-count').innerText=mode==='othello'?s.p2:'';
-        render();
+        document.getElementById('p1-area').classList.toggle('active',turn===1);
+        document.getElementById('p2-area').classList.toggle('active',turn===2);
+        let s=getS(); document.getElementById('p1-c').innerText=mode==='othello'?s.p1:'';
+        document.getElementById('p2-c').innerText=mode==='othello'?s.p2:''; render();
+    }
+    function render(){
+        let g=ctx.createLinearGradient(0,0,560,560); g.addColorStop(0,mode==='omok'?'#e3c17a':'#2c7a3d'); g.addColorStop(1,mode==='omok'?'#cdaa5b':'#1e5a2d');
+        ctx.fillStyle=g; ctx.fillRect(0,0,560,560); ctx.strokeStyle="rgba(0,0,0,0.1)";
+        for(let i=0;i<=size;i++){ctx.beginPath();ctx.moveTo(i*cellSize,0);ctx.lineTo(i*cellSize,560);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i*cellSize);ctx.lineTo(560,i*cellSize);ctx.stroke();}
+        board.forEach((r,y)=>r.forEach((v,x)=>{ if(v==0)return; let cx=x*cellSize+cellSize/2, cy=y*cellSize+cellSize/2, rd=cellSize*0.42;
+            ctx.beginPath(); ctx.arc(cx,cy,rd,0,Math.PI*2); let stl=ctx.createRadialGradient(cx-rd/3,cy-rd/3,rd/10,cx,cy,rd);
+            if(v==1){stl.addColorStop(0,"#444"); stl.addColorStop(1,"#000");}else{stl.addColorStop(0,"#fff"); stl.addColorStop(1,"#ddd");}
+            ctx.fillStyle=stl; ctx.fill(); if(lastMove&&lastMove.x==x&&lastMove.y==y){ctx.fillStyle="red";ctx.beginPath();ctx.arc(cx,cy,4,0,Math.PI*2);ctx.fill();}
+        }));
     }
     initGame('omok');
 </script></body></html>
