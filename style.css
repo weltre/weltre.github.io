@@ -40,3 +40,11 @@ button {
 button:hover { background: var(--accent); }
 
 .info-text { margin-top: 15px; color: #888; font-size: 13px; line-height: 1.6; }
+
+.result-msg {
+    font-size: 24px;
+    font-weight: bold;
+    margin-top: 10px;
+    height: 30px; /* 공간 고정 */
+}
+#timer.hidden { display: none; }
