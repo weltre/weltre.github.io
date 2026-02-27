@@ -4,30 +4,34 @@
     <div style="margin-bottom:15px;"><button id="btn-omok" onclick="initGame('omok')">오목</button> <button id="btn-othello" onclick="initGame('othello')">오셀로</button></div>
     <div class="status-bar">
         <div id="p1-area" class="player">흑돌<div id="p1-c" style="font-size:20px"></div></div>
-        <div id="timer" style="font-size:30px; color:var(--timer); font-weight:bold;">60</div>
+        <div id="msg-area" style="min-width:160px;">
+            <div id="timer" style="font-size:30px; color:var(--timer); font-weight:bold;">60</div>
+            <div id="res-msg" style="font-size:22px; font-weight:bold; color:var(--accent); display:none;"></div>
+        </div>
         <div id="p2-area" class="player">백돌<div id="p2-c" style="font-size:20px"></div></div>
     </div>
     <canvas id="board" width="560" height="560"></canvas>
     <div style="margin-top:15px;"><button onclick="undo()" style="background:var(--danger)">무르기</button> <button onclick="location.href='index.html'">목록으로</button></div>
 </div>
 <script>
-    const cvs=document.getElementById('board'), ctx=cvs.getContext('2d'), tEl=document.getElementById('timer');
-    let mode='', size, cellSize, board, turn=1, history=[], lastMove=null, timeLeft=60, timerInt;
+    const cvs=document.getElementById('board'), ctx=cvs.getContext('2d'), tEl=document.getElementById('timer'), rEl=document.getElementById('res-msg');
+    let mode='', size, cellSize, board, turn=1, history=[], lastMove=null, timeLeft=60, timerInt, isOver=false;
     function initGame(m){
-        mode=m; turn=1; history=[]; lastMove=null; size=(m==='omok')?15:8; cellSize=560/size;
+        clearInterval(timerInt); mode=m; turn=1; history=[]; lastMove=null; isOver=false; size=(m==='omok')?15:8; cellSize=560/size;
         board=Array.from({length:size},()=>Array(size).fill(0));
         if(m==='othello'){let mid=size/2; board[mid-1][mid-1]=board[mid][mid]=2; board[mid-1][mid]=board[mid][mid-1]=1;}
-        resetT(); updateUI();
+        tEl.style.display="block"; rEl.style.display="none"; resetT(); updateUI();
     }
-    function resetT(){ clearInterval(timerInt); timeLeft=60; tEl.innerText=timeLeft; timerInt=setInterval(()=>{timeLeft--; tEl.innerText=timeLeft; if(timeLeft<=0)changeT();},1000); }
+    function resetT(){ clearInterval(timerInt); timeLeft=60; tEl.innerText=timeLeft; timerInt=setInterval(()=>{if(!isOver){timeLeft--; tEl.innerText=timeLeft; if(timeLeft<=0)changeT();}},1000); }
     function changeT(){ turn=3-turn; if(mode==='othello'&&!canM(turn)) { turn=3-turn; if(!canM(turn)) endG(); } resetT(); updateUI(); }
-    function endG(){ let s=getS(); alert(`종료! 흑:${s.p1} 백:${s.p2}`); initGame(mode); }
-    function undo(){ if(history.length>0){ let p=history.pop(); board=p.board; turn=p.turn; lastMove=p.lastMove; updateUI(); } }
+    function endG(){ isOver=true; clearInterval(timerInt); let s=getS(); showRes(`종료! ${s.p1}:${s.p2}`); }
+    function showRes(txt){ tEl.style.display="none"; rEl.innerText=txt; rEl.style.display="block"; }
+    function undo(){ if(history.length>0 && !isOver){ let p=history.pop(); board=p.board; turn=p.turn; lastMove=p.lastMove; updateUI(); } }
     cvs.onclick=(e)=>{
-        const x=Math.floor(e.offsetX/cellSize), y=Math.floor(e.offsetY/cellSize); if(board[y][x]!==0)return;
+        if(isOver)return; const x=Math.floor(e.offsetX/cellSize), y=Math.floor(e.offsetY/cellSize); if(board[y][x]!==0)return;
         if(mode==='omok'){
             history.push({board:board.map(r=>[...r]),turn,lastMove}); board[y][x]=turn; lastMove={x,y};
-            if(checkW(y,x)){ render(); setTimeout(()=>{alert((turn==1?'흑':'백')+' 승리!'); initGame('omok')},50); return; }
+            if(checkW(y,x)){ render(); isOver=true; clearInterval(timerInt); showRes((turn==1?'흑':'백')+' 승리!'); return; }
             changeT();
         } else if(flip(y,x,turn,true)){ history.push({board:board.map(r=>[...r]),turn,lastMove}); lastMove={x,y}; changeT(); }
     };
