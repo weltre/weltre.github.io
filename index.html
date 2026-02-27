@@ -1,50 +1,84 @@
-<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Board Game Studio</title>
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>오목 오셀로</title>
 <style>
-    :root { --bg: #1a1a1a; --card: #2d2d2d; --accent: #3498db; }
-    body { background: var(--bg); color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 10px; scale: 0.9; }
-    .header, .btn-group { display: flex; gap: 8px; margin-bottom: 8px; }
-    button { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; background: var(--card); color: #ccc; }
+    :root { --bg: #1a1a1a; --card: #2d2d2d; --accent: #3498db; --danger: #e74c3c; }
+    body { background: var(--bg); color: #fff; font-family: 'Malgun Gothic', sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; }
+    .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
+    button { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; background: var(--card); color: #ccc; transition: 0.2s; }
     button.active { background: var(--accent); color: #fff; }
-    .scoreboard { display: flex; gap: 20px; background: var(--card); padding: 10px 25px; border-radius: 10px; margin-bottom: 10px; align-items: center; }
-    .player { display: flex; flex-direction: column; align-items: center; opacity: 0.3; width: 60px; }
+    button:hover { filter: brightness(1.2); }
+    
+    .scoreboard { display: flex; gap: 40px; background: var(--card); padding: 15px 40px; border-radius: 15px; margin-bottom: 20px; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+    .player { display: flex; flex-direction: column; align-items: center; opacity: 0.3; transition: 0.3s; width: 60px; }
     .player.active { opacity: 1; color: var(--accent); transform: scale(1.1); }
-    .timer-center { text-align: center; min-width: 80px; }
-    #timer-display { font-size: 24px; font-weight: bold; }
-    #timer-display.low { color: #e74c3c; }
-    canvas { border: 4px solid #34495e; box-shadow: 0 5px 20px #000; cursor: pointer; max-width: 90vw; }
+    .score { font-size: 28px; font-weight: bold; }
+    
+    .timer-center { display: flex; flex-direction: column; align-items: center; min-width: 100px; }
+    #timer-display { font-size: 32px; font-weight: bold; margin-bottom: 5px; }
+    #timer-display.low { color: var(--danger); }
+    .pause-btn { background: #555; font-size: 12px; padding: 5px 12px; color: white; }
+
+    canvas { border: 5px solid #34495e; border-radius: 8px; box-shadow: 0 10px 40px #000; cursor: pointer; }
+    .desc { margin-top: 15px; color: #aaa; font-size: 13px; text-align: center; line-height: 1.6; }
+    .bottom-controls { margin-top: 20px; }
 </style></head><body>
+
 <div class="btn-group">
-    <button id="btn-omok" onclick="initGame('omok')">오목</button>
-    <button id="btn-othello" onclick="initGame('othello')">오셀로</button>
-    <button onclick="undo()" style="background:#e74c3c;color:#fff">무르기</button>
+    <button id="btn-omok" onclick="initGame('omok')">오목 대국</button>
+    <button id="btn-othello" onclick="initGame('othello')">오셀로 대국</button>
 </div>
+
 <div class="scoreboard">
-    <div id="p1-area" class="player"><span>흑(BLACK)</span><b id="p1-score" style="font-size:20px">0</b></div>
-    <div class="timer-center"><div id="timer-display">60</div><button onclick="togglePause()" id="pause-btn" style="font-size:10px;padding:2px 5px">일시정지</button></div>
-    <div id="p2-area" class="player"><span>백(WHITE)</span><b id="p2-score" style="font-size:20px">0</b></div>
+    <div id="p1-area" class="player"><span>흑돌</span><div id="p1-score" class="score">0</div></div>
+    <div class="timer-center">
+        <div id="timer-display">60</div>
+        <button class="pause-btn" onclick="togglePause()" id="pause-btn">일시정지</button>
+    </div>
+    <div id="p2-area" class="player"><span>백돌</span><div id="p2-score" class="score">0</div></div>
 </div>
+
 <canvas id="board" width="560" height="560"></canvas>
+
+<div class="bottom-controls">
+    <button onclick="undo()" style="background: var(--danger); color: white;">한 수 무르기</button>
+    <button onclick="initGame(mode)" style="background: #444; color: white;">판 초기화</button>
+</div>
+
+<div class="desc" id="game-desc">
+    <b>오목:</b> 가로, 세로, 대각선으로 돌 5개를 먼저 이으면 승리합니다.<br>
+    <b>오셀로:</b> 상대 돌을 내 돌로 감싸서 뒤집으세요. 판에 내 돌이 더 많으면 승리합니다.
+</div>
+
 <script>
     const canvas = document.getElementById('board'), ctx = canvas.getContext('2d'), timerEl = document.getElementById('timer-display'), p1ScoreEl = document.getElementById('p1-score'), p2ScoreEl = document.getElementById('p2-score');
     let mode='', size=0, cellSize=0, board=[], turn=1, p1Win=0, p2Win=0, history=[], lastMove=null, timeLeft=60, timerInterval=null, isPaused=false;
 
     function initGame(m) {
-        mode=m; turn=1; history=[]; lastMove=null; isPaused=false; size=(m==='omok')?15:8; cellSize=canvas.width/size;
-        document.querySelectorAll('.btn-group button').forEach(b=>b.classList.remove('active')); document.getElementById(`btn-${m}`).classList.add('active');
+        clearInterval(timerInterval); mode=m; turn=1; history=[]; lastMove=null; isPaused=false;
+        size=(m==='omok')?15:8; cellSize=canvas.width/size;
+        document.querySelectorAll('.btn-group button').forEach(b=>b.classList.remove('active'));
+        document.getElementById(`btn-${m}`).classList.add('active');
         board = Array.from({length:size},()=>Array(size).fill(0));
         if(m==='othello'){let mid=size/2; board[mid-1][mid-1]=board[mid][mid]=2; board[mid-1][mid]=board[mid][mid-1]=1;}
         resetTimer(); updateUI();
     }
-    function resetTimer() { clearInterval(timerInterval); timeLeft=60; isPaused=false; timerEl.classList.remove('low'); startTimer(); }
-    function startTimer() { timerInterval = setInterval(()=>{ if(!isPaused){ timeLeft--; timerEl.innerText=timeLeft; if(timeLeft<=10)timerEl.classList.add('low'); if(timeLeft<=0){alert("시간초과!"); changeTurn();} } },1000); }
-    function togglePause() { isPaused=!isPaused; document.getElementById('pause-btn').innerText=isPaused?"재개":"일시정지"; canvas.style.opacity=isPaused?0.3:1; }
+
+    function resetTimer() { clearInterval(timerInterval); timeLeft=60; isPaused=false; document.getElementById('pause-btn').innerText="일시정지"; timerEl.classList.remove('low'); startTimer(); }
+    function startTimer() { timerInterval = setInterval(()=>{ if(!isPaused){ timeLeft--; timerEl.innerText=timeLeft; if(timeLeft<=10)timerEl.classList.add('low'); if(timeLeft<=0){alert("시간 초과! 턴이 넘어갑니다."); changeTurn();} } },1000); }
+    function togglePause() { isPaused=!isPaused; document.getElementById('pause-btn').innerText=isPaused?"재개":"일시정지"; canvas.style.opacity=isPaused?0.3:1; canvas.style.pointerEvents=isPaused?"none":"auto"; }
     function changeTurn() { turn=3-turn; if(mode==='othello')checkPass(); resetTimer(); updateUI(); }
     function undo() { if(history.length>0 && !isPaused){ let p=history.pop(); board=p.board; turn=p.turn; lastMove=p.lastMove; resetTimer(); updateUI(); } }
+
     canvas.onclick = (e) => {
-        if(isPaused)return; const x=Math.floor(e.offsetX/cellSize), y=Math.floor(e.offsetY/cellSize); if(board[y][x]!==0)return;
-        if(mode==='omok'){ history.push({board:board.map(r=>[...r]),turn,lastMove}); board[y][x]=turn; lastMove={x,y}; if(checkWin(y,x)){ render(); setTimeout(()=>{alert("승리!"); turn==1?p1Win++:p2Win++; initGame('omok')},50); return; } changeTurn(); }
-        else if(flip(y,x,turn,true)){ history.push({board:board.map(r=>[...r]),turn,lastMove}); lastMove={x,y}; changeTurn(); }
+        const x=Math.floor(e.offsetX/cellSize), y=Math.floor(e.offsetY/cellSize); if(board[y][x]!==0)return;
+        if(mode==='omok'){
+            history.push({board:board.map(r=>[...r]),turn,lastMove}); board[y][x]=turn; lastMove={x,y};
+            if(checkWin(y,x)){ render(); clearInterval(timerInterval); setTimeout(()=>{alert(`${turn==1?'흑':'백'} 승리!`); turn==1?p1Win++:p2Win++; initGame('omok')},50); return; }
+            changeTurn();
+        } else if(flip(y,x,turn,true)){
+            history.push({board:board.map(r=>[...r]),turn,lastMove}); lastMove={x,y}; changeTurn();
+        }
     };
+
     function render() {
         let g = ctx.createLinearGradient(0,0,560,560); g.addColorStop(0,mode==='omok'?'#e3c17a':'#2c7a3d'); g.addColorStop(1,mode==='omok'?'#cdaa5b':'#1e5a2d');
         ctx.fillStyle=g; ctx.fillRect(0,0,560,560); ctx.strokeStyle="rgba(0,0,0,0.15)";
@@ -54,10 +88,11 @@
             let stl=ctx.createRadialGradient(cx-rd/3,cy-rd/3,rd/10,cx,cy,rd);
             if(v==1){stl.addColorStop(0,"#444"); stl.addColorStop(1,"#000");}else{stl.addColorStop(0,"#fff"); stl.addColorStop(1,"#ddd");}
             ctx.fillStyle=stl; ctx.fill(); ctx.shadowBlur=0;
-            if(lastMove&&lastMove.x==x&&lastMove.y==y){ctx.fillStyle="#e74c3c";ctx.beginPath();ctx.arc(cx,cy,3,0,6.3);ctx.fill();}
+            if(lastMove&&lastMove.x==x&&lastMove.y==y){ctx.fillStyle="#e74c3c";ctx.beginPath();ctx.arc(cx,cy,4,0,Math.PI*2);ctx.fill();}
         }));
     }
-    function checkPass() { if(!canMove(turn)){ turn=3-turn; if(!canMove(turn)){ let s=getS(); alert(`종료! 흑:${s.p1} 백:${s.p2}`); initGame('othello'); }else alert("패스!"); } }
+
+    function checkPass() { if(!canMove(turn)){ turn=3-turn; if(!canMove(turn)){ let s=getS(); alert(`게임 종료! 흑:${s.p1} 백:${s.p2}`); initGame('othello'); }else alert("둘 곳이 없어 차례가 넘어갑니다."); } }
     function canMove(p){for(let y=0;y<size;y++)for(let x=0;x<size;x++)if(board[y][x]==0&&flip(y,x,p,false))return true; return false;}
     function flip(y,x,p,f){ let s=false, ds=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]; ds.forEach(([dy,dx])=>{ let ty=y+dy,tx=x+dx,m=[]; while(board[ty]?.[tx]===3-p){m.push([ty,tx]);ty+=dy;tx+=dx;} if(board[ty]?.[tx]===p&&m.length>0){if(f){m.forEach(([ry,rx])=>board[ry][rx]=p);board[y][x]=p;} s=true;} }); return s; }
     function checkWin(y,x){ return [[1,0],[0,1],[1,1],[1,-1]].some(([dy,dx])=>{ let c=1; [[1,1],[-1,-1]].forEach(([s])=>{ for(let i=1;i<5;i++)if(board[y+dy*i*s]?.[x+dx*i*s]===turn)c++; else break; }); return c>=5; }); }
