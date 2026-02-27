@@ -3,7 +3,10 @@
 <div class="container">
     <div class="status-bar">
         <div id="p1-score" style="font-size:50px; color:var(--p1); font-weight:bold;">0</div>
-        <div id="timer-area"><div id="timer" style="font-size:40px; color:var(--timer); font-weight:bold;">180</div><div id="res" style="font-size:24px; display:none;"></div></div>
+        <div id="timer-area" style="min-width:180px;">
+            <div id="timer" style="font-size:40px; color:var(--timer); font-weight:bold;">180</div>
+            <div id="res" style="font-size:24px; font-weight:bold; display:none;"></div>
+        </div>
         <div id="p2-score" style="font-size:50px; color:var(--p2); font-weight:bold;">0</div>
     </div>
     <canvas id="pong" width="700" height="450"></canvas>
