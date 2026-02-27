@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head><meta charset="UTF-8"><title>Player</title><link rel="stylesheet" href="common.css"></head>
+<head><meta charset="UTF-8"><title>Adventure Player v6.1.9</title><link rel="stylesheet" href="common.css"></head>
 <body>
-    <div id="load-screen" class="container">
-        <input type="file" id="loader" accept=".json">
+    <div id="load-screen" class="container" style="justify-content: center; align-items: center;">
+        <h1 style="color:var(--point)">🎮 ENGINE v6.1.9</h1>
+        <input type="file" id="loader" accept=".json" style="padding:20px; border:2px dashed #444;">
     </div>
     <div id="game-ui" class="container" style="display:none">
         <div id="status-bar"></div><div id="inventory-bar"></div>
         <div id="scene-scroll"><div id="scene-text"></div></div>
         <div id="options-box"></div>
     </div>
-    <div id="msg-box"><div id="msg-content"></div><br><button onclick="closeMsg()">확인</button></div>
+    <div id="msg-box"><h2 id="msg-title">알림</h2><div id="msg-content" style="margin:15px 0; text-align:left;"></div><button class="btn btn-orange" style="width:100%" onclick="closeMsg()">확인</button></div>
 <script>
     let sc, state = { stats: {}, inv: new Set(), clicks: {}, next: null };
     document.getElementById('loader').onchange = e => {
@@ -18,6 +19,7 @@
         r.onload = ev => {
             sc = JSON.parse(ev.target.result);
             if(sc.config.themeColor) document.documentElement.style.setProperty('--point', sc.config.themeColor);
+            if(sc.config.subColor) document.documentElement.style.setProperty('--sub', sc.config.subColor);
             document.getElementById('load-screen').style.display = 'none';
             document.getElementById('game-ui').style.display = 'flex';
             init();
@@ -29,8 +31,13 @@
         render(sc.config.startNode);
     }
     function updateUI() {
-        document.getElementById('status-bar').innerText = sc.config.stats.map(s => `${s.label}: ${state.stats[s.key]}`).join(' | ');
-        document.getElementById('inventory-bar').innerText = "🎒: " + Array.from(state.inv).join(', ');
+        document.getElementById('status-bar').innerHTML = sc.config.stats.map(s => `<span>${s.label}: ${state.stats[s.key]}</span>`).join(' | ');
+        document.getElementById('inventory-bar').innerText = "🎒 소지품: " + (state.inv.size ? Array.from(state.inv).join(', ') : "없음");
+    }
+    function applyData(obj) {
+        if(obj.effects) Object.keys(obj.effects).forEach(k => state.stats[k] = Math.max(0, (state.stats[k]||0) + Number(obj.effects[k])));
+        if(obj.getItem) obj.getItem.split(',').forEach(v => v.trim() && state.inv.add(v.trim()));
+        if(obj.removeItem) obj.removeItem.split(',').forEach(v => v.trim() && state.inv.delete(v.trim()));
     }
     function render(id) {
         const n = sc.scenes[id]; if(!n) return;
@@ -43,17 +50,21 @@
         document.getElementById('scene-text').innerText = n.text;
         const box = document.getElementById('options-box'); box.innerHTML = '';
         n.options.forEach((o, i) => {
-            if(o.maxClicks && (state.clicks[`${id}_${i}`]||0) >= o.maxClicks) return;
+            const key = `${id}_${i}`;
+            if(o.maxClicks && (state.clicks[key]||0) >= o.maxClicks) return;
             const btn = document.createElement('button'); btn.className = 'game-btn'; btn.innerText = o.text;
+            let ok = true, miss = [];
+            if(o.effects) Object.keys(o.effects).forEach(k => { if((state.stats[k]||0) + o.effects[k] < 0) ok = false; });
+            if(o.requireItem) o.requireItem.split(',').forEach(v => { if(v.trim() && !state.inv.has(v.trim())) { ok = false; miss.push(v.trim()); }});
+            if(!ok) { btn.disabled = true; btn.innerText += miss.length ? ` [필요: ${miss.join(',')}]` : " [조건부족]"; }
             btn.onclick = () => {
-                state.clicks[`${id}_${i}`] = (state.clicks[`${id}_${i}`]||0) + 1;
+                state.clicks[key] = (state.clicks[key]||0) + 1;
                 if(o.isReset) return init();
-                if(o.effects) Object.keys(o.effects).forEach(k => state.stats[k] += o.effects[k]);
-                if(o.getItem) o.getItem.split(',').forEach(v => v.trim() && state.inv.add(v.trim()));
-                if(o.removeItem) o.removeItem.split(',').forEach(v => v.trim() && state.inv.delete(v.trim()));
+                applyData(o);
                 if(o.results?.length > 0) {
                     let roll = Math.random()*100, acc = 0, res = o.results[o.results.length-1];
                     for(let r of o.results) { acc += r.chance; if(roll <= acc) { res = r; break; } }
+                    applyData(res);
                     showMsg(res.message, res.next || o.next || id);
                 } else { render(o.next || id); }
             }; box.appendChild(btn);
