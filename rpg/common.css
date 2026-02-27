@@ -1,20 +1,9 @@
 :root { 
-    --bg: #0f1115; 
-    --card: #1a1d23; 
-    --btn: #2c3e50; 
-    --text: #e0e0e0; 
-    --point: #0097e6; 
-    --danger: #c0392b; 
-    --orange: #e67e22;
+    --bg: #0f1115; --card: #1a1d23; --btn: #2c3e50; --text: #e0e0e0; 
+    --point: #0097e6; --danger: #c0392b; --orange: #e67e22;
 }
-
-body { 
-    background: var(--bg); 
-    color: var(--text); 
-    font-family: 'Pretendard', -apple-system, sans-serif; 
-    margin: 0; 
-    line-height: 1.6; 
-}
+body { background: var(--bg); color: var(--text); font-family: 'Pretendard', sans-serif; margin: 0; line-height: 1.6; overflow-x: hidden; }
+.container { max-width: 750px; margin: 0 auto; padding: 40px 20px; }
 
 /* 커스텀 메시지 박스 */
 #msg-box { 
@@ -23,16 +12,11 @@ body {
     padding: 30px; border-radius: 15px; box-shadow: 0 0 50px rgba(0,0,0,0.8);
     z-index: 2000; text-align: center; display: none;
 }
+#msg-box button { background: var(--point); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; margin-top: 20px; width: 100%; font-weight: bold; }
 
-#msg-box h2 { color: var(--point); margin-top: 0; }
-#msg-box button { 
-    background: var(--point); color: white; border: none; padding: 12px; 
-    border-radius: 8px; cursor: pointer; margin-top: 20px; width: 100%; font-weight: bold; 
-}
-
-.btn { cursor: pointer; padding: 10px 15px; border: none; border-radius: 5px; font-weight: bold; color: white; transition: 0.2s; display: inline-block; text-decoration: none; text-align: center; }
+.btn { cursor: pointer; padding: 10px 15px; border: none; border-radius: 5px; font-weight: bold; color: white; transition: 0.2s; display: inline-block; text-align: center; }
 .btn-blue { background: var(--point); }
 .btn-orange { background: var(--orange); }
 .btn-red { background: var(--danger); }
 
-input, textarea, select { width: 100%; padding: 10px; background: #252a31; border: 1px solid #3d444d; color: white; border-radius: 6px; box-sizing: border-box; }
+input, textarea { width: 100%; padding: 12px; background: #252a31; border: 1px solid #3d444d; color: white; border-radius: 6px; box-sizing: border-box; }
