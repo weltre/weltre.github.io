@@ -1,73 +1,81 @@
 {
   "config": {
-    "title": "코드 레드: 오로라 기지",
-    "startNode": "entry_gate",
-    "themeColor": "#00d2ff",
-    "subColor": "#ff9f43",
+    "title": "드래곤 슬레이어: 서막",
+    "startNode": "village_gate",
+    "themeColor": "#2c3e50",
+    "subColor": "#e67e22",
     "stats": [
-      { "key": "hull", "label": "🛡️ 선체 무결성", "initial": 100 },
-      { "key": "energy", "label": "⚡ 보조 전력", "initial": 15 },
-      { "key": "intel", "label": "💾 데이터 복구", "initial": 0 }
+      { "key": "hp", "label": "❤️ 체력", "initial": 20 },
+      { "key": "gold", "label": "💰 골드", "initial": 10 },
+      { "key": "fame", "label": "✨ 명성", "initial": 0 }
     ]
   },
   "scenes": {
-    "entry_gate": {
-      "text": "[오로라 기지 외곽 정문]\n기지는 침묵에 잠겨 있습니다. 외부 패널을 조작해 내부로 진입해야 합니다.\n산소 농도가 급격히 낮아지고 있습니다.",
+    "village_gate": {
+      "text": "당신은 전설의 검사가 되기 위해 고향 마을을 떠나려 합니다.\n마을 입구에는 늙은 경비병이 졸고 있습니다.",
+      "options": [
+        { "text": "정중하게 인사를 건넨다", "effects": { "fame": 1 }, "next": "gate_pass" },
+        { 
+          "text": "몰래 주머니를 뒤진다 (확률)", 
+          "results": [
+            { "chance": 40, "message": "성공했습니다! 소액의 골드를 훔쳤습니다.", "effects": { "gold": 15, "fame": -1 } },
+            { "chance": 60, "message": "들켰습니다! 경비병에게 한 대 맞고 쫓겨납니다.", "effects": { "hp": -5 } }
+          ],
+          "next": "gate_pass"
+        }
+      ]
+    },
+    "gate_pass": {
+      "text": "마을을 벗어나자 갈림길이 나타납니다.\n왼쪽은 으스스한 '고블린 숲', 오른쪽은 번화한 '왕도'입니다.",
       "autoEvents": [
-        { "statKey": "hull", "threshold": 1, "next": "death_hull", "message": "기지의 압력을 견디지 못하고 구조물이 붕괴했습니다." }
+        { "statKey": "hp", "threshold": 1, "next": "death", "message": "상처가 깊어 더 이상 걸을 수 없습니다..." }
       ],
       "options": [
-        { "text": "패널 해킹 시도 (전력 5 소모)", "effects": { "energy": -5 }, "results": [
-          { "chance": 40, "message": "해킹 성공! 보안 카드를 획득했습니다.", "getItem": "보안카드", "next": "hallway_main" },
-          { "chance": 60, "message": "해킹 실패. 역전류가 흘러 전력만 낭비했습니다.", "next": "entry_gate" }
-        ]},
-        { "text": "잔해 속 보급품 뒤지기 (최대 2회)", "maxClicks": 2, "results": [
-          { "chance": 50, "message": "소형 배터리를 찾아 전력을 충전합니다.", "effects": { "energy": 10 } },
-          { "chance": 50, "message": "쓸만한 것이 없습니다." }
-        ]},
-        { "text": "강제로 문을 열기 (선체 손상 위험)", "effects": { "hull": -20 }, "next": "hallway_main" }
+        { "text": "고블린 숲으로 향한다", "next": "goblin_forest" },
+        { "text": "왕도로 향한다 (통행료 20G 필요)", "effects": { "gold": -20 }, "next": "royal_city" }
       ]
     },
-    "hallway_main": {
-      "text": "[중앙 통로]\n전력이 복구되지 않아 붉은색 비상등만 깜빡입니다.\n서빙 로봇 하나가 망가진 채 방치되어 있습니다.",
-      "options": [
-        { "text": "로봇을 수리해 정보를 얻는다 (데이터 +10)", "effects": { "energy": -10, "intel": 10 }, "maxClicks": 1 },
-        { "text": "데이터 서버실로 이동 (보안카드 필요)", "requireItem": "보안카드", "next": "server_room" },
-        { "text": "원자로실로 강제 이동 (전력 10 소모)", "effects": { "energy": -10 }, "next": "reactor_core" }
-      ]
-    },
-    "server_room": {
-      "text": "[데이터 서버실]\n이곳의 단말기에는 기지의 폭발 원인이 기록되어 있습니다.\n데이터를 최대한 많이 확보해야 진상을 규명할 수 있습니다.",
-      "options": [
-        { "text": "데이터 다운로드 (전력 5 소모)", "effects": { "energy": -5, "intel": 20 }, "maxClicks": 3 },
-        { "text": "서버실 부품 추출 (선체 보수용)", "getItem": "나노수리킷", "maxClicks": 1 },
-        { "text": "중앙 통로로 복귀", "next": "hallway_main" }
-      ]
-    },
-    "reactor_core": {
-      "text": "[원자로 핵심부]\n원자로가 폭주 직전입니다. 선체 무결성이 급격히 떨어지고 있습니다.",
+    "goblin_forest": {
+      "text": "[전투 발생]\n굶주린 고블린이 나타났습니다! 놈의 손에는 녹슨 단검이 들려 있습니다.",
       "autoEvents": [
-        { "statKey": "hull", "threshold": 30, "next": "death_hull", "message": "원자로 폭발의 여파로 기지가 산산조각 났습니다." }
+        { "statKey": "hp", "threshold": 1, "next": "death", "message": "고블린의 칼날에 쓰러졌습니다..." }
       ],
       "options": [
-        { "text": "나노수리킷으로 선체 보강 (+40)", "requireItem": "나노수리킷", "removeItem": "나노수리킷", "effects": { "hull": 40 } },
-        { "text": "원자로 강제 정지 (데이터 50 필요)", "effects": { "intel": -50 }, "results": [
-          { "chance": 100, "message": "원자로를 성공적으로 진정시켰습니다!", "next": "ending_good" }
-        ]},
-        { "text": "탈출 포드로 도주", "next": "ending_escape" }
+        { 
+          "text": "필사적으로 싸운다!", 
+          "results": [
+            { "chance": 50, "message": "승리했습니다! 고블린의 단검을 뺏었습니다.", "getItem": "녹슨 단검", "effects": { "fame": 5 } },
+            { "chance": 50, "message": "반격당했습니다! 겨우 도망칩니다.", "effects": { "hp": -10 } }
+          ],
+          "next": "forest_clear"
+        }
       ]
     },
-    "ending_good": {
-      "text": "당신은 기지의 폭발을 막고 모든 데이터를 확보했습니다.\n연맹의 구조선이 다가오는 것이 보입니다.\n[TRUE ENDING: 오로라의 구원자]",
-      "options": [{ "text": "새로운 임무 시작", "isReset": true, "next": "entry_gate" }]
+    "forest_clear": {
+      "text": "숲을 빠져나왔습니다. 손에는 전리품이 들려 있습니다.",
+      "options": [
+        { "text": "다시 길을 떠난다", "next": "gate_pass" }
+      ]
     },
-    "ending_escape": {
-      "text": "기지를 뒤로하고 탈출 포드에 몸을 실었습니다.\n진실은 어둠 속에 묻혔지만, 당신은 살아남았습니다.\n[NORMAL ENDING: 비겁한 생존자]",
-      "options": [{ "text": "다시 도전", "isReset": true, "next": "entry_gate" }]
+    "royal_city": {
+      "text": "왕도의 화려한 불빛이 당신을 반깁니다.\n이곳에서 당신의 진정한 모험이 시작될 것입니다.",
+      "requireItem": "녹슨 단검",
+      "options": [
+        { "text": "무기점에 단검을 판다", "removeItem": "녹슨 단검", "effects": { "gold": 50 }, "next": "royal_city" },
+        { "text": "길드에 가입한다", "next": "happy_end" }
+      ]
     },
-    "death_hull": {
-      "text": "경고: 선체 무결성 제로. 산소 공급 중단.\n당신의 여정은 여기서 끝납니다.\n[GAME OVER]",
-      "options": [{ "text": "마지막 체크포인트", "isReset": true, "next": "entry_gate" }]
+    "death": {
+      "text": "당신의 모험은 허망하게 끝났습니다.\n차디찬 바닥에서 눈을 감습니다.",
+      "options": [
+        { "text": "운명을 뒤바꾼다 (부활)", "isReset": true }
+      ]
+    },
+    "happy_end": {
+      "text": "당신은 왕도 길드의 정식 일원이 되었습니다!\n전설적인 드래곤 슬레이어로 기록될 첫 발을 내디뎠습니다.\n\n[데모 종료]",
+      "options": [
+        { "text": "다시 시작하기", "isReset": true }
+      ]
     }
   }
 }
