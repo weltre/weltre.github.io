@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head><meta charset="UTF-8"><title>Player v6.2.0</title><link rel="stylesheet" href="common.css"></head>
+<head><meta charset="UTF-8"><title>Player v6.2.1</title><link rel="stylesheet" href="common.css"></head>
 <body>
     <div id="load-screen" class="container" style="justify-content: center; align-items: center;">
-        <h1 style="color:var(--point)">🎮 ENGINE v6.2.0</h1>
-        <input type="file" id="loader" accept=".json">
+        <h1 style="color:var(--point)">🎮 ENGINE v6.2.1</h1>
+        <input type="file" id="loader" accept=".json" style="padding:20px; border:2px dashed var(--border);">
     </div>
     <div id="game-ui" class="container" style="display:none">
         <div id="status-bar"></div><div id="inventory-bar"></div>
         <div id="scene-scroll"><div id="scene-text"></div></div>
         <div id="options-box"></div>
     </div>
-    <div id="msg-box"><div id="msg-content" style="margin-bottom:20px; text-align:left;"></div><button class="btn btn-blue" style="width:100%" onclick="closeMsg()">확인</button></div>
+    <div id="msg-box"><h2 id="msg-title">알림</h2><div id="msg-content" style="margin:20px 0; text-align:left;"></div><button class="btn btn-blue" style="width:100%" onclick="closeMsg()">확인</button></div>
 <script>
     let sc, state = { stats: {}, inv: new Set(), clicks: {}, next: null };
     document.getElementById('loader').onchange = e => {
@@ -19,22 +19,33 @@
         r.onload = ev => {
             sc = JSON.parse(ev.target.result);
             if(sc.config.themeColor) document.documentElement.style.setProperty('--point', sc.config.themeColor);
+            if(sc.config.subColor) document.documentElement.style.setProperty('--sub', sc.config.subColor);
             document.getElementById('load-screen').style.display = 'none';
             document.getElementById('game-ui').style.display = 'flex';
             init();
         }; r.readAsText(e.target.files[0]);
     };
+
     function init() {
         state.inv = new Set(); state.clicks = {};
         sc.config.stats.forEach(s => state.stats[s.key] = Number(s.initial));
         render(sc.config.startNode);
     }
+
     function updateUI() {
         document.getElementById('status-bar').innerHTML = sc.config.stats.map(s => `<span>${s.label}: ${state.stats[s.key]}</span>`).join(' | ');
-        document.getElementById('inventory-bar').innerText = "🎒: " + (state.inv.size ? Array.from(state.inv).join(', ') : "없음");
+        document.getElementById('inventory-bar').innerText = "🎒 소지품: " + (state.inv.size ? Array.from(state.inv).join(', ') : "없음");
     }
+
+    function applyLogic(obj) {
+        if(obj.effects) Object.keys(obj.effects).forEach(k => state.stats[k] = (state.stats[k]||0) + Number(obj.effects[k]));
+        if(obj.getItem) obj.getItem.split(',').forEach(i => i.trim() && state.inv.add(i.trim()));
+        if(obj.removeItem) obj.removeItem.split(',').forEach(i => i.trim() && state.inv.delete(i.trim()));
+    }
+
     function render(id) {
         const n = sc.scenes[id]; if(!n) return;
+        // 자동 이벤트 체크 (v5 기능 복구)
         if(n.autoEvents) {
             for(let e of n.autoEvents) {
                 if((state.stats[e.statKey]||0) < (e.threshold||0)) { showMsg(e.message, e.next||id); return; }
@@ -42,35 +53,29 @@
         }
         updateUI();
         document.getElementById('scene-text').innerText = n.text;
-        const box = document.getElementById('options-box'); 
-        box.innerHTML = ''; // 버튼 박스 초기화
+        const box = document.getElementById('options-box'); box.innerHTML = '';
 
         n.options.forEach((o, i) => {
             const key = `${id}_${i}`;
             if(o.maxClicks && (state.clicks[key]||0) >= o.maxClicks) return;
-            const btn = document.createElement('button');
-            btn.className = 'game-btn'; btn.innerText = o.text;
+            const btn = document.createElement('button'); btn.className = 'game-btn'; btn.innerText = o.text;
             
-            let can = true;
-            if(o.requireItem) o.requireItem.split(',').forEach(v => { if(v.trim() && !state.inv.has(v.trim())) can = false; });
-            if(!can) { btn.disabled = true; btn.innerText += " (조건 부족)"; }
+            let can = true, miss = [];
+            if(o.requireItem) o.requireItem.split(',').forEach(v => { if(v.trim() && !state.inv.has(v.trim())) { can = false; miss.push(v.trim()); }});
+            if(!can) { btn.disabled = true; btn.innerText += ` (필요: ${miss.join(',')})`; }
 
             btn.onclick = () => {
                 state.clicks[key] = (state.clicks[key]||0) + 1;
                 if(o.isReset) return init();
-                if(o.effects) Object.keys(o.effects).forEach(k => state.stats[k] += Number(o.effects[k]));
-                if(o.getItem) o.getItem.split(',').forEach(v => v.trim() && state.inv.add(v.trim()));
-                if(o.removeItem) o.removeItem.split(',').forEach(v => v.trim() && state.inv.delete(v.trim()));
-
+                applyLogic(o);
                 if(o.results?.length > 0) {
                     let roll = Math.random()*100, acc = 0, res = o.results[o.results.length-1];
                     for(let r of o.results) { acc += r.chance; if(roll <= acc) { res = r; break; } }
-                    if(res.effects) Object.keys(res.effects).forEach(k => state.stats[k] += Number(res.effects[k]));
-                    if(res.getItem) res.getItem.split(',').forEach(v => v.trim() && state.inv.add(v.trim()));
+                    applyLogic(res);
                     showMsg(res.message, res.next || o.next || id);
                 } else { render(o.next || id); }
             };
-            box.appendChild(btn); // 버튼을 화면에 추가
+            box.appendChild(btn);
         });
     }
     function showMsg(t, n) { document.getElementById('msg-content').innerText = t; document.getElementById('msg-box').style.display = 'block'; state.next = n; }
