@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Scenario Maker v3.7</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        header { background: #1a1d23; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; }
+        main { display: flex; flex: 1; overflow: hidden; }
+        #sidebar { width: 300px; border-right: 1px solid #333; overflow-y: auto; background: #15181c; }
+        #editor { flex: 1; padding: 30px; overflow-y: auto; }
+        .node-card { padding: 15px; border-bottom: 1px solid #333; cursor: pointer; transition: 0.2s; }
+        .node-card:hover { background: #1e2227; }
+        .node-card.active { border-left: 4px solid var(--point); background: #1e2227; }
+        .form-group { margin-bottom: 20px; }
+        input, textarea { width: 100%; padding: 12px; background: #252a31; border: 1px solid #3d444d; color: white; border-radius: 6px; box-sizing: border-box; }
+        .opt-edit-card { background: #1e2227; padding: 20px; border-radius: 10px; margin-top: 15px; border: 1px solid #333; }
+    </style>
+</head>
+<body>
+    <header>
+        <strong>🛠️ SCENARIO MAKER</strong>
+        <div>
+            <button class="btn btn-blue" onclick="exportJSON()">💾 JSON 저장</button>
+            <button class="btn btn-orange" onclick="document.getElementById('f-in').click()">📂 불러오기</button>
+            <input type="file" id="f-in" style="display:none" onchange="importJSON(event)">
+        </div>
+    </header>
+
+    <main>
+        <div id="sidebar">
+            <div style="padding:20px;"><button class="btn btn-blue" style="width:100%" onclick="addNode()">+ 새 장면 추가</button></div>
+            <div id="node-list"></div>
+        </div>
+        <div id="editor">
+            <div id="edit-form" style="display:none">
+                <div class="form-group">
+                    <label>장면 ID</label>
+                    <input type="text" id="ed-id" onblur="renameNode()">
+                </div>
+                <div class="form-group">
+                    <label>지문 / 대사</label>
+                    <textarea id="ed-text" rows="6" oninput="updateNode()"></textarea>
+                </div>
+                <hr style="border:0; border-top:1px solid #333; margin:30px 0;">
+                <h3>🔘 선택지 구성</h3>
+                <div id="opt-container"></div>
+                <button class="btn btn-blue" style="margin-top:10px;" onclick="addOption()">+ 선택지 추가</button>
+            </div>
+        </div>
+    </main>
+
+<script>
+    let scenario = {
+        config: { startNode: "start", stats: [{key:"hp", label:"❤️ 체력", initial:10}], theme: {} },
+        scenes: { "start": { text: "첫 장면입니다.", options: [] } }
+    };
+    let activeId = "start";
+
+    function renderSidebar() {
+        const list = document.getElementById('node-list');
+        list.innerHTML = '';
+        Object.keys(scenario.scenes).forEach(id => {
+            const d = document.createElement('div');
+            d.className = `node-card ${activeId === id ? 'active' : ''}`;
+            d.innerText = id;
+            d.onclick = () => loadNode(id);
+            list.appendChild(d);
+        });
+    }
+
+    function loadNode(id) {
+        activeId = id;
+        document.getElementById('edit-form').style.display = 'block';
+        document.getElementById('ed-id').value = id;
+        document.getElementById('ed-text').value = scenario.scenes[id].text;
+        renderOptions();
+        renderSidebar();
+    }
+
+    function renderOptions() {
+        const container = document.getElementById('opt-container');
+        container.innerHTML = '';
+        scenario.scenes[activeId].options.forEach((opt, i) => {
+            const d = document.createElement('div');
+            d.className = 'opt-edit-card';
+            d.innerHTML = `
+                <input type="text" placeholder="선택지 텍스트" value="${opt.text}" oninput="scenario.scenes['${activeId}'].options[${i}].text=this.value">
+                <div style="display:flex; gap:10px; margin-top:10px;">
+                    <input type="text" placeholder="이동장면 ID" value="${opt.next}" oninput="scenario.scenes['${activeId}'].options[${i}].next=this.value">
+                    <input type="text" placeholder="필요아이템" value="${opt.requireItem||''}" oninput="scenario.scenes['${activeId}'].options[${i}].requireItem=this.value">
+                </div>
+                <button class="btn btn-red" style="margin-top:10px; font-size:0.8em;" onclick="scenario.scenes['${activeId}'].options.splice(${i},1); renderOptions();">삭제</button>
+            `;
+            container.appendChild(d);
+        });
+    }
+
+    function updateNode() { scenario.scenes[activeId].text = document.getElementById('ed-text').value; }
+    function addNode() { const id = "node_" + Date.now(); scenario.scenes[id] = {text:"", options:[]}; loadNode(id); }
+    function addOption() { scenario.scenes[activeId].options.push({text:"새 선택", next:activeId}); renderOptions(); }
+    
+    function exportJSON() {
+        const blob = new Blob([JSON.stringify(scenario, null, 2)], {type: "application/json"});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download="scenario.json"; a.click();
+    }
+
+    function importJSON(e) {
+        const reader = new FileReader();
+        reader.onload = (ev) => { scenario = JSON.parse(ev.target.result); renderSidebar(); loadNode(scenario.config.startNode); };
+        reader.readAsText(e.target.files[0]);
+    }
+
+    renderSidebar();
+</script>
+</body>
+</html>
