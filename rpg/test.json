@@ -1,33 +1,89 @@
 {
   "config": {
-    "startNode": "bridge",
+    "startNode": "awakening",
     "stats": [
-      { "key": "oxygen", "label": "💨 산소", "initial": 100 },
-      { "key": "hull", "label": "🛡️ 외벽", "initial": 100 }
-    ],
-    "theme": { "bg": "#050a0f", "btn": "#162b32", "text": "#89c4d7" }
+      { "key": "hp", "label": "❤️ 체력", "initial": 20 },
+      { "key": "oxygen", "label": "💨 산소", "initial": 30 }
+    ]
   },
   "scenes": {
-    "bridge": {
-      "text": "잠수함 브릿지에 경보가 울립니다. 외부 수압이 급증하고 있습니다. 산소가 희박해지기 전에 조치를 취해야 합니다.",
-      "image": "https://images.unsplash.com/photo-1508891015332-15f1638848d5?q=80&w=1000&auto=format&fit=crop",
+    "awakening": {
+      "text": "정신을 차리니 기지가 침수되고 있습니다. 발목까지 물이 찼습니다.\n선반 위에 '산소 캔'과 '비상용 칼'이 보입니다.",
       "autoEvents": [
-        { "statKey": "oxygen", "threshold": 20, "chance": 100, "next": "game_over", "message": "산소 부족으로 정신을 잃었습니다..." }
+        { "statKey": "oxygen", "threshold": 1, "chance": 100, "next": "death_suffocation", "message": "산소가 부족해 의식을 잃었습니다..." }
       ],
       "options": [
-        { "text": "산소 탱크를 수리한다", "next": "bridge", "effects": { "oxygen": 30, "hull": -10 } },
-        { "text": "탈출 포트로 달려간다", "next": "escape", "requireItem": "카드키" },
-        { "text": "캐비닛을 뒤진다", "next": "bridge", "getItem": "카드키", "effects": { "oxygen": -10 } }
+        { "text": "산소 캔을 챙긴다", "next": "awakening", "getItem": "산소 캔" },
+        { "text": "비상용 칼을 챙긴다", "next": "awakening", "getItem": "비상용 칼" },
+        { "text": "복도로 나간다", "next": "corridor", "effects": { "oxygen": -5 } }
       ]
     },
-    "escape": {
-      "text": "무사히 탈출 포트에 탑승했습니다! 수면 위로 떠오르며 당신은 안도의 한숨을 내쉽니다.",
-      "image": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1000&auto=format&fit=crop",
-      "options": [{ "text": "처음부터 다시", "next": "bridge" }]
+    "corridor": {
+      "text": "복도는 어둡고 무너진 파이프에서 증기가 뿜어져 나옵니다.\n거대한 해초 괴물이 앞을 가로막고 있습니다!",
+      "autoEvents": [
+        { "statKey": "oxygen", "threshold": 1, "chance": 100, "next": "death_suffocation", "message": "희박한 공기 속에서 괴물과 대치하다 쓰러졌습니다." }
+      ],
+      "options": [
+        { 
+          "text": "산소 캔을 사용한다 (+30 산소)", 
+          "requireItem": "산소 캔", 
+          "removeItem": "산소 캔", 
+          "next": "corridor", 
+          "effects": { "oxygen": 30 },
+          "message": "산소를 흡입하니 숨통이 트입니다. (아이템 소모)"
+        },
+        { 
+          "text": "칼로 괴물을 공격한다 (확률적 승리)", 
+          "requireItem": "비상용 칼", 
+          "results": [
+            { "chance": 70, "next": "escape_dock", "message": "괴물의 눈을 정확히 찔렀습니다! 괴물이 비명을 지르며 도망칩니다.", "effects": { "oxygen": -10 } },
+            { "chance": 30, "next": "corridor", "message": "공격이 빗나갔습니다! 괴물에게 반격당합니다.", "effects": { "hp": -15, "oxygen": -5 } }
+          ]
+        },
+        { 
+          "text": "괴물을 피해 옆방으로 숨는다", 
+          "next": "storage", 
+          "effects": { "oxygen": -10, "hp": -5 }
+        }
+      ]
     },
-    "game_over": {
-      "text": "잠수함은 심해의 어둠 속으로 가라앉았습니다. [GAME OVER]",
-      "options": [{ "text": "재도전", "next": "bridge" }]
+    "storage": {
+      "text": "창고 안에는 '소형 잠수정 키'가 있습니다. 하지만 나가는 문이 수압으로 막혔습니다.",
+      "options": [
+        { "text": "잠수정 키를 챙긴다", "next": "storage", "getItem": "잠수정 키" },
+        { "text": "비상문을 칼로 비틀어 연다", "requireItem": "비상용 칼", "next": "corridor", "message": "칼날이 휘었지만 문을 여는 데 성공했습니다." }
+      ]
+    },
+    "escape_dock": {
+      "text": "탈출 선착장입니다. 잠수정 한 대가 대기 중입니다.",
+      "options": [
+        { 
+          "text": "잠수정에 올라타 탈출한다", 
+          "requireItem": "잠수정 키", 
+          "next": "ending_good", 
+          "removeItem": "잠수정 키",
+          "message": "잠수정 엔진이 가동됩니다. 수면으로 급부상합니다!"
+        },
+        { 
+          "text": "맨몸으로 헤엄쳐 나간다", 
+          "results": [
+            { "chance": 5, "next": "ending_good", "message": "말도 안 되는 행운으로 수면까지 도달했습니다.", "effects": {} },
+            { "chance": 95, "next": "death_crush", "message": "심해의 엄청난 수압이 당신을 짓누릅니다.", "effects": { "hp": -100 } }
+          ]
+        }
+      ]
+    },
+    "ending_good": {
+      "text": "따스한 햇살이 비치는 수면 위입니다. 당신은 생존했습니다!\n[HAPPY ENDING]",
+      "options": [{ "text": "다시 하기", "next": "awakening" }]
+    },
+    "death_suffocation": {
+      "text": "기지 바닥에 쓰러진 채 마지막 숨을 내뱉습니다.\n[사망: 질식]",
+      "options": [{ "text": "재도전", "next": "awakening" }]
+    },
+    "death_crush": {
+      "text": "잠수정 없이는 심해를 견딜 수 없었습니다.\n[사망: 수압 압착]",
+      "options": [{ "text": "재도전", "next": "awakening" }]
     }
   }
 }
