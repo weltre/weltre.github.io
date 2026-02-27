@@ -16,7 +16,7 @@ body {
     line-height: 1.6; 
 }
 
-/* 커스텀 메시지 박스 (No Alert) */
+/* 커스텀 메시지 박스 */
 #msg-box { 
     position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
     width: 90%; max-width: 450px; background: var(--card); border: 2px solid var(--point);
@@ -30,7 +30,9 @@ body {
     border-radius: 8px; cursor: pointer; margin-top: 20px; width: 100%; font-weight: bold; 
 }
 
-.btn { cursor: pointer; padding: 10px 15px; border: none; border-radius: 5px; font-weight: bold; color: white; transition: 0.2s; }
+.btn { cursor: pointer; padding: 10px 15px; border: none; border-radius: 5px; font-weight: bold; color: white; transition: 0.2s; display: inline-block; text-decoration: none; text-align: center; }
 .btn-blue { background: var(--point); }
 .btn-orange { background: var(--orange); }
 .btn-red { background: var(--danger); }
+
+input, textarea, select { width: 100%; padding: 10px; background: #252a31; border: 1px solid #3d444d; color: white; border-radius: 6px; box-sizing: border-box; }
