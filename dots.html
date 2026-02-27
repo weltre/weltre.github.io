@@ -1,4 +1,4 @@
-<!DOCTYPE html><html><head><meta charset="UTF-8"><title>땅따먹기</title>
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>땅따먹기 - 연속턴</title>
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="container">
     <div class="status-bar">
@@ -13,46 +13,80 @@
     const cvs=document.getElementById("game"), ctx=cvs.getContext("2d");
     const ROWS=8, COLS=8, SIZE=60, OFFSET=50;
     let turn=1, p1S=0, p2S=0, lines=[], boxes=Array.from({length:ROWS},()=>Array(COLS).fill(0)), lastL=null, isOver=false;
+
     cvs.onclick=(e)=>{
         if(isOver)return;
         const rect=cvs.getBoundingClientRect(), x=e.clientX-rect.left-OFFSET, y=e.clientY-rect.top-OFFSET;
         let r=Math.round(y/SIZE), c=Math.round(x/SIZE), dx=x-c*SIZE, dy=y-r*SIZE, hit=false, id="";
-        if(Math.abs(dx)>Math.abs(dy)){
-            let col=dx>0?c:c-1; if(r>=0&&r<=ROWS&&col>=0&&col<COLS){ id=`h-${r}-${col}`; if(!lines.find(l=>l.id===id)){lines.push({id, owner:turn}); hit=true;} }
-        } else {
-            let row=dy>0?r:r-1; if(c>=0&&c<=COLS&&row>=0&&row<ROWS){ id=`v-${row}-${c}`; if(!lines.find(l=>l.id===id)){lines.push({id, owner:turn}); hit=true;} }
+
+        if(Math.abs(dx)>Math.abs(dy)){ 
+            let col=dx>0?c:c-1; 
+            if(r>=0&&r<=ROWS&&col>=0&&col<COLS){ id=`h-${r}-${col}`; if(!lines.find(l=>l.id===id)){lines.push({id, owner:turn}); hit=true;} }
+        } else { 
+            let row=dy>0?r:r-1; 
+            if(c>=0&&c<=COLS&&row>=0&&row<ROWS){ id=`v-${row}-${c}`; if(!lines.find(l=>l.id===id)){lines.push({id, owner:turn}); hit=true;} }
         }
-        if(hit){ lastL=id; if(!checkSq()) turn=3-turn; updateUI(); }
+
+        if(hit){ 
+            lastL=id; 
+            const completedAny = checkSq(); // 사각형 완성 여부 확인
+            if(!completedAny) {
+                turn = 3 - turn; // 완성 못했을 때만 턴 교체
+            }
+            updateUI(); 
+        }
     };
+
     function checkSq(){
-        let newB=false;
-        for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
-            if(boxes[r][c]===0){
-                const has=(id)=>lines.some(l=>l.id===id);
-                if(has(`h-${r}-${c}`)&&has(`h-${r+1}-${c}`)&&has(`v-${r}-${c}`)&&has(`v-${r}-${c+1}`)){
-                    boxes[r][c]=turn; if(turn===1)p1S++; else p2S++; newB=true;
+        let newlyCompleted = false;
+        const has = (id) => lines.some(l => l.id === id);
+        
+        for(let r=0; r<ROWS; r++){
+            for(let c=0; c<COLS; c++){
+                if(boxes[r][c] === 0){ // 아직 주인이 없는 칸만 검사
+                    if(has(`h-${r}-${c}`) && has(`h-${r+1}-${c}`) && has(`v-${r}-${c}`) && has(`v-${r}-${c+1}`)){
+                        boxes[r][c] = turn;
+                        if(turn === 1) p1S++; else p2S++;
+                        newlyCompleted = true; // 이번 턴에 사각형 하나라도 완성됨
+                    }
                 }
             }
-        } return newB;
+        }
+        return newlyCompleted;
     }
+
     function render(){
         ctx.fillStyle="#e3c17a"; ctx.fillRect(0,0,580,580);
-        for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++) if(boxes[r][c]!==0){ ctx.fillStyle=boxes[r][c]===1?"rgba(52,152,219,0.5)":"rgba(231,76,60,0.5)"; ctx.fillRect(OFFSET+c*SIZE,OFFSET+r*SIZE,SIZE,SIZE); }
+        for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++) if(boxes[r][c]!==0){ 
+            ctx.fillStyle=boxes[r][c]===1?"rgba(52,152,219,0.5)":"rgba(231,76,60,0.5)"; 
+            ctx.fillRect(OFFSET+c*SIZE,OFFSET+r*SIZE,SIZE,SIZE); 
+        }
         lines.forEach(l=>{
             let p=l.id.split('-'), t=p[0], r_v=parseInt(p[1]), c_v=parseInt(p[2]);
             ctx.lineWidth=(l.id===lastL)?7:4; ctx.strokeStyle=l.owner===1?"#3498db":"#e74c3c";
-            ctx.beginPath(); if(t==='h'){ctx.moveTo(OFFSET+c_v*SIZE,OFFSET+r_v*SIZE);ctx.lineTo(OFFSET+(c_v+1)*SIZE,OFFSET+r_v*SIZE);}
-            else{ctx.moveTo(OFFSET+c_v*SIZE,OFFSET+r_v*SIZE);ctx.lineTo(OFFSET+c_v*SIZE,OFFSET+(r_v+1)*SIZE);} ctx.stroke();
+            ctx.beginPath(); 
+            if(t==='h'){ ctx.moveTo(OFFSET+c_v*SIZE,OFFSET+r_v*SIZE); ctx.lineTo(OFFSET+(c_v+1)*SIZE,OFFSET+r_v*SIZE); }
+            else { ctx.moveTo(OFFSET+c_v*SIZE,OFFSET+r_v*SIZE); ctx.lineTo(OFFSET+c_v*SIZE,OFFSET+(r_v+1)*SIZE); } 
+            ctx.stroke();
         });
         for(let r=0;r<=ROWS;r++)for(let c=0;c<=COLS;c++){ ctx.fillStyle="#2c3e50"; ctx.beginPath(); ctx.arc(OFFSET+c*SIZE,OFFSET+r*SIZE,5,0,Math.PI*2); ctx.fill(); }
     }
+
     function updateUI(){
         document.getElementById('p1-s').innerText=p1S; document.getElementById('p2-s').innerText=p2S;
         document.getElementById('p1-area').classList.toggle('active',turn===1);
         document.getElementById('p2-area').classList.toggle('active',turn===2);
+        
         const ct=document.getElementById('cur-turn');
-        if(p1S+p2S===ROWS*COLS){ isOver=true; ct.innerText=p1S>p2S?"파랑 승리!":(p1S<p2S?"빨강 승리!":"무승부!"); ct.style.color="var(--timer)"; }
-        else { ct.innerText=turn===1?"파랑 차례":"빨강 차례"; ct.style.color=turn===1?"#3498db":"#e74c3c"; }
+        if(p1S+p2S===ROWS*COLS){ 
+            isOver=true; 
+            ct.innerText=p1S>p2S?"파랑 승리!":(p1S<p2S?"빨강 승리!":"무승부!"); 
+            ct.style.color="var(--timer)"; 
+        } else {
+            ct.innerText=turn===1?"파랑 차례":"빨강 차례"; 
+            ct.style.color=turn===1?"#3498db":"#e74c3c";
+        }
         render();
-    } updateUI();
+    } 
+    updateUI();
 </script></body></html>
