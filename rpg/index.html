@@ -2,36 +2,31 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title id="p-title-tab">Adventure Player v5.3</title>
+    <title id="p-title-tab">Adventure Player v5.4</title>
     <link rel="stylesheet" href="common.css">
-    <style>
-        #status-bar { display: flex; gap: 20px; padding-bottom: 10px; border-bottom: 2px solid var(--point); margin-bottom: 15px; font-weight: bold; }
-        #inventory-bar { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 25px; border-left: 5px solid var(--sub); } /* 인벤토리는 서브색 */
-        #scene-text { font-size: 1.25em; line-height: 1.8; min-height: 180px; white-space: pre-wrap; margin-bottom: 40px; }
-        .game-btn { display: block; width: 100%; padding: 18px; margin: 12px 0; background: var(--card); color: var(--text); border: 1px solid #444; border-left: 4px solid var(--point); border-radius: 8px; cursor: pointer; text-align: left; transition: 0.3s; }
-        .game-btn:hover:not(:disabled) { border-color: var(--sub); } /* 호버 시 서브색 강조 */
-        .game-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-        #msg-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 450px; background: var(--card); border: 3px solid var(--sub); padding: 30px; border-radius: 15px; z-index: 2000; text-align: center; display: none; }
-    </style>
 </head>
 <body>
-    <div class="container">
-        <div id="game-ui" style="display:none">
-            <div id="status-bar" class="theme-text"></div>
-            <div id="inventory-bar" class="sub-text">🎒 소지품: 없음</div>
-            <div id="scene-text"></div>
-            <div id="options-box"></div>
-        </div>
+    <div id="load-screen" class="container">
+        <h1 id="p-display-title" class="theme-text">🎮 Adventure Player</h1>
+        <p>시나리오 JSON 파일을 선택하여 시작하세요.</p>
+        <input type="file" id="loader" accept=".json">
     </div>
+
+    <div id="game-ui" class="container" style="display:none">
+        <div id="status-bar"></div>
+        <div id="inventory-bar">🎒 소지품: 없음</div>
+        <div id="scene-text"></div>
+        <div id="options-box"></div>
+    </div>
+
     <div id="msg-box">
-        <h2 id="msg-title" class="sub-text">알림</h2>
+        <h2 id="msg-title">알림</h2>
         <div id="msg-content"></div>
-        <button onclick="closeMsg()" class="sub-bg" style="width:100%; padding:10px; color:white; border:none; border-radius:5px; margin-top:20px; cursor:pointer;">확인</button>
+        <button id="msg-close-btn" onclick="closeMsg()">확인</button>
     </div>
 
 <script>
     let scenario, state = { stats: {}, inventory: new Set(), clickCounts: {}, nextNode: null };
-    document.body.insertAdjacentHTML('afterbegin', '<div id="load-screen" class="container"><h1>🎮 Adventure Player</h1><input type="file" id="loader" accept=".json"></div>');
 
     document.getElementById('loader').onchange = (e) => {
         const reader = new FileReader();
@@ -47,6 +42,8 @@
 
     function applyConfig() {
         if(!scenario.config) return;
+        document.title = scenario.config.title;
+        document.getElementById('p-display-title').innerText = scenario.config.title;
         if(scenario.config.themeColor) document.documentElement.style.setProperty('--point', scenario.config.themeColor);
         if(scenario.config.subColor) document.documentElement.style.setProperty('--sub', scenario.config.subColor);
     }
@@ -60,32 +57,62 @@
     function renderNode(nodeId) {
         const node = scenario.scenes[nodeId];
         if(!node) return;
+
+        // 자동 이벤트 체크 (사망 등)
+        if(node.autoEvents) {
+            for(let ev of node.autoEvents) {
+                if(state.stats[ev.statKey] < ev.threshold) return showMsg(ev.message, ev.next);
+            }
+        }
+
         updateUI();
         document.getElementById('scene-text').innerText = node.text;
-        const box = document.getElementById('options-box'); box.innerHTML = '';
+        const box = document.getElementById('options-box'); 
+        box.innerHTML = '';
+        
         node.options.forEach((opt, idx) => {
+            const optKey = `${nodeId}_${idx}`;
             if(opt.requireItem && !state.inventory.has(opt.requireItem)) return;
-            if(opt.maxClicks && (state.clickCounts[`${nodeId}_${idx}`] || 0) >= opt.maxClicks) return;
+            if(opt.maxClicks && (state.clickCounts[optKey] || 0) >= opt.maxClicks) return;
+
             const btn = document.createElement('button');
             btn.className = 'game-btn';
             btn.innerText = opt.text;
+
+            // 스탯 부족 시 비활성화 (결과가 0 미만이 되는지 체크)
+            let canAfford = true;
+            if(opt.effects) {
+                Object.keys(opt.effects).forEach(k => {
+                    if((state.stats[k] || 0) + opt.effects[k] < 0) canAfford = false;
+                });
+            }
+            if(!canAfford) { btn.disabled = true; btn.innerText += " (수량 부족)"; }
+
             btn.onclick = () => {
-                state.clickCounts[`${nodeId}_${idx}`] = (state.clickCounts[`${nodeId}_${idx}`] || 0) + 1;
+                state.clickCounts[optKey] = (state.clickCounts[optKey] || 0) + 1;
+                if(opt.isReset) return initGame();
                 if(opt.effects) applyEffects(opt.effects);
                 if(opt.getItem) state.inventory.add(opt.getItem);
+                if(opt.removeItem) state.inventory.delete(opt.removeItem);
+                
                 if(opt.results && opt.results.length > 0) {
                     let roll = Math.random()*100, acc = 0, res = opt.results[0];
                     for(let r of opt.results) { acc += r.chance; if(roll <= acc) { res = r; break; } }
                     if(res.effects) applyEffects(res.effects);
-                    showMsg(res.message, res.next || nodeId);
-                } else { renderNode(opt.next || nodeId); }
+                    if(res.getItem) state.inventory.add(res.getItem);
+                    showMsg(res.message, res.next || opt.next || nodeId);
+                } else { 
+                    renderNode(opt.next || nodeId); 
+                }
             };
             box.appendChild(btn);
         });
     }
 
     function applyEffects(eff) {
-        Object.keys(eff).forEach(k => { state.stats[k] = Math.max(0, state.stats[k] + eff[k]); });
+        Object.keys(eff).forEach(k => { 
+            state.stats[k] = Math.max(0, (state.stats[k] || 0) + eff[k]); 
+        });
         updateUI();
     }
 
@@ -107,3 +134,4 @@
 </script>
 </body>
 </html>
+
