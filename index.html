@@ -12,24 +12,24 @@
     #timer-display { font-size: 32px; font-weight: bold; }
     #timer-display.low { color: var(--danger); }
     canvas { border: 5px solid #34495e; border-radius: 8px; box-shadow: 0 10px 40px #000; cursor: pointer; }
-    .desc { margin-top: 15px; color: #aaa; font-size: 13px; text-align: center; line-height: 1.6; }
-    .othello-score { font-size: 20px; font-weight: bold; margin-top: 5px; }
+    .desc { margin-top: 15px; color: #aaa; font-size: 13px; text-align: center; }
+    .othello-count { font-size: 20px; font-weight: bold; margin-top: 5px; color: #fff; }
 </style></head><body>
 <div class="btn-group">
-    <button id="btn-omok" onclick="initGame('omok')">오목 (렌주룰)</button>
-    <button id="btn-othello" onclick="initGame('othello')">오셀로</button>
+    <button id="btn-omok" onclick="initGame('omok')">오목 대국</button>
+    <button id="btn-othello" onclick="initGame('othello')">오셀로 대국</button>
 </div>
 <div class="scoreboard">
-    <div id="p1-area" class="player"><span>흑돌</span><div id="p1-info" class="othello-score"></div></div>
+    <div id="p1-area" class="player"><span>흑돌</span><div id="p1-count" class="othello-count"></div></div>
     <div class="timer-center"><div id="timer-display">60</div><button onclick="togglePause()" id="pause-btn" style="font-size:11px;margin-top:5px;padding:3px 8px">일시정지</button></div>
-    <div id="p2-area" class="player"><span>백돌</span><div id="p2-info" class="othello-score"></div></div>
+    <div id="p2-area" class="player"><span>백돌</span><div id="p2-count" class="othello-count"></div></div>
 </div>
 <canvas id="board" width="560" height="560"></canvas>
 <div style="margin-top:20px;display:flex;gap:10px;">
     <button onclick="undo()" style="background:var(--danger);color:#fff">한 수 무르기</button>
     <button onclick="initGame(mode)" style="background:#444;color:#fff">판 초기화</button>
 </div>
-<div class="desc"><b>오목:</b> 흑은 33 및 6목 이상이 금지됩니다. (렌주룰 핵심 적용)<br><b>오셀로:</b> 상대 돌을 내 돌로 포위하여 뒤집으세요.</div>
+<div class="desc">가로, 세로, 대각선 중 먼저 5알을 놓으면 승리합니다.</div>
 
 <script>
     const canvas=document.getElementById('board'), ctx=canvas.getContext('2d'), timerEl=document.getElementById('timer-display');
@@ -53,36 +53,16 @@
     canvas.onclick = (e) => {
         if(isPaused)return; const x=Math.floor(e.offsetX/cellSize), y=Math.floor(e.offsetY/cellSize); if(board[y][x]!==0)return;
         if(mode==='omok'){
-            if(turn===1 && isForbidden(y, x)){ alert("금수(33 또는 장목)입니다!"); return; }
             history.push({board:board.map(r=>[...r]),turn,lastMove}); board[y][x]=turn; lastMove={x,y};
             if(checkWin(y,x)){ render(); clearInterval(timerInterval); setTimeout(()=>{alert(`${turn==1?'흑':'백'} 승리!`); initGame('omok')},50); return; }
             changeTurn();
         } else if(flip(y,x,turn,true)){ history.push({board:board.map(r=>[...r]),turn,lastMove}); lastMove={x,y}; changeTurn(); }
     };
 
-    function isForbidden(y, x) {
-        board[y][x] = 1; // 가상으로 놓아봄
-        let is33 = false, count3 = 0, isOver6 = false;
-        const dirs = [[1,0],[0,1],[1,1],[1,-1]];
-        dirs.forEach(([dy,dx]) => {
-            let line = 1, spaceStart=0, spaceEnd=0;
-            [[1,1],[-1,-1]].forEach(([s])=>{
-                for(let i=1;i<6;i++){
-                    let ny=y+dy*i*s, nx=x+dx*i*s;
-                    if(board[ny]?.[nx]===1) line++; else { if(board[ny]?.[nx]===0) (s===1?spaceStart++:spaceEnd++); break; }
-                }
-            });
-            if(line === 3 && spaceStart>0 && spaceEnd>0) count3++;
-            if(line >= 6) isOver6 = true;
-        });
-        board[y][x] = 0; // 복구
-        return count3 >= 2 || isOver6;
-    }
-
     function checkWin(y,x){
         return [[1,0],[0,1],[1,1],[1,-1]].some(([dy,dx])=>{
             let c=1; [[1,1],[-1,-1]].forEach(([s])=>{ for(let i=1;i<6;i++)if(board[y+dy*i*s]?.[x+dx*i*s]===turn)c++; else break; });
-            return mode==='omok' && turn===1 ? c===5 : c>=5; // 흑은 정확히 5개만
+            return c>=5; // 렌주룰 제거: 5개 이상이면 무조건 승리
         });
     }
 
@@ -106,8 +86,8 @@
         document.getElementById('p1-area').classList.toggle('active',turn==1);
         document.getElementById('p2-area').classList.toggle('active',turn==2);
         let s=getS();
-        document.getElementById('p1-info').innerText=mode==='othello'?s.p1:'';
-        document.getElementById('p2-info').innerText=mode==='othello'?s.p2:'';
+        document.getElementById('p1-count').innerText=mode==='othello'?s.p1:'';
+        document.getElementById('p2-count').innerText=mode==='othello'?s.p2:'';
         render();
     }
     initGame('omok');
