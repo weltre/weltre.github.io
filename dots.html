@@ -3,7 +3,7 @@
 <div class="container">
     <div class="status-bar">
         <div id="p1-area" class="player" style="color:var(--p1)">파랑(P1)<div id="p1-s" style="font-size:30px">0</div></div>
-        <div id="cur-turn" style="font-size:20px; min-width:150px;">파랑 차례</div>
+        <div id="cur-turn" style="font-size:18px; min-width:180px; font-weight:bold;">파랑 차례</div>
         <div id="p2-area" class="player" style="color:var(--p2)">빨강(P2)<div id="p2-s" style="font-size:30px">0</div></div>
     </div>
     <canvas id="game" width="580" height="580"></canvas>
@@ -12,8 +12,9 @@
 <script>
     const cvs=document.getElementById("game"), ctx=cvs.getContext("2d");
     const ROWS=8, COLS=8, SIZE=60, OFFSET=50;
-    let turn=1, p1S=0, p2S=0, lines=[], boxes=Array.from({length:8},()=>[]), lastL=null;
+    let turn=1, p1S=0, p2S=0, lines=[], boxes=Array.from({length:8},()=>[]), lastL=null, isOver=false;
     cvs.onclick=(e)=>{
+        if(isOver)return;
         const rect=cvs.getBoundingClientRect(), x=e.clientX-rect.left-OFFSET, y=e.clientY-rect.top-OFFSET;
         let r=Math.round(y/SIZE), c=Math.round(x/SIZE), dx=x-c*SIZE, dy=y-r*SIZE, hit=false, id="";
         if(Math.abs(dx)>Math.abs(dy)){
@@ -26,7 +27,7 @@
     function checkSq(){
         let newB=false; const hasL=(id)=>lines.some(l=>l.id===id);
         for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
-            if(!boxes[r][c]&&hasL(`h${r}${c}`)&&hasL(`h${r+1}${c}`)&&hasL(`v${r}${c}`)&&hasL(`v${r}${c+1}`)){
+            if(!boxes[r][c]&&hasL(`h${r}${c}`)&&hasL(`h${r+1}${c}`)&&hasL(`v${r}${c}`)&&hasL(`v${r+1}${c}`)){
                 boxes[r][c]=turn; if(turn===1)p1S++; else p2S++; newB=true;
             }
         } return newB;
@@ -46,8 +47,13 @@
         document.getElementById('p1-s').innerText=p1S; document.getElementById('p2-s').innerText=p2S;
         document.getElementById('p1-area').classList.toggle('active',turn===1);
         document.getElementById('p2-area').classList.toggle('active',turn===2);
-        const ct=document.getElementById('cur-turn'); ct.innerText=turn===1?"파랑 차례":"빨강 차례"; ct.style.color=turn===1?"#3498db":"#e74c3c";
-        render(); if(p1S+p2S===64) ct.innerText=p1S>p2S?"파랑 승리!":"빨강 승리!";
+        const ct=document.getElementById('cur-turn');
+        if(p1S+p2S===64) {
+            isOver=true; ct.innerText=p1S>p2S?"파랑 승리!":(p1S<p2S?"빨강 승리!":"무승부!");
+            ct.style.color="var(--timer)"; ct.style.fontSize="24px";
+        } else {
+            ct.innerText=turn===1?"파랑 차례":"빨강 차례"; ct.style.color=turn===1?"var(--p1)":"var(--p2)";
+        }
+        render();
     } updateUI();
 </script></body></html>
-
