@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Scenario Maker Pro - Debugged</title>
+    <style>
+        :root { --bg: #f5f6fa; --dark: #2f3640; --blue: #0097e6; --green: #44bd32; --red: #c23616; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; background: var(--bg); }
+        header { background: var(--dark); color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        main { display: flex; flex: 1; overflow: hidden; }
+        #sidebar { width: 300px; border-right: 1px solid #dcdde1; background: white; display: flex; flex-direction: column; }
+        #editor-area { flex: 1; padding: 25px; overflow-y: auto; }
+        .section { background: white; padding: 20px; border-radius: 10px; border: 1px solid #dcdde1; margin-bottom: 20px; }
+        .node-item { padding: 12px; border-bottom: 1px solid #f1f2f6; cursor: pointer; transition: background 0.2s; }
+        .node-item:hover { background: #f1f2f6; }
+        .node-item.active { background: #e1f5fe; border-left: 5px solid var(--blue); font-weight: bold; }
+        label { display: block; margin: 15px 0 5px; font-weight: bold; color: #7f8c8d; }
+        input, textarea { width: 100%; padding: 10px; border: 1px solid #dcdde1; border-radius: 5px; box-sizing: border-box; }
+        .opt-card { background: #f9f9f9; border: 1px solid #dcdde1; padding: 15px; margin-top: 15px; border-radius: 8px; position: relative; }
+        .btn { cursor: pointer; padding: 10px 18px; border: none; border-radius: 5px; font-weight: bold; }
+        .btn-add { background: var(--green); color: white; }
+        .btn-save { background: var(--blue); color: white; }
+        .btn-del { background: var(--red); color: white; padding: 5px 10px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <strong>🛠️ 시나리오 메이커 v3.1 (Checked)</strong>
+    <div>
+        <input type="file" id="import-input" style="display:none" accept=".json">
+        <button class="btn" style="background:#8e44ad; color:white;" onclick="document.getElementById('import-input').click()">📂 불러오기</button>
+        <button class="btn btn-save" onclick="exportJSON()">💾 JSON 저장</button>
+    </div>
+</header>
+
+<main>
+    <div id="sidebar">
+        <div style="padding:15px; border-bottom:1px solid #dcdde1;">
+            <button class="btn btn-add" style="width:100%" onclick="addNode()">+ 새 장면 추가</button>
+        </div>
+        <div id="nodes-container" style="overflow-y:auto; flex:1;"></div>
+    </div>
+
+    <div id="editor-area">
+        <div class="section">
+            <h3>⚙️ 게임 전역 설정</h3>
+            <div id="stats-config-list"></div>
+            <button class="btn btn-add" onclick="addStatField()" style="margin-top:10px; font-size: 0.8em;">+ 스탯 추가</button>
+        </div>
+
+        <div id="editor-form" class="section" style="display:none">
+            <h3>🎬 장면 편집: <span id="display-id" style="color:var(--blue)"></span></h3>
+            <label>장면 ID (유니크해야 함)</label>
+            <input type="text" id="edit-id" onblur="updateNodeId()">
+            <label>배경 이미지 (로컬 경로 또는 URL)</label>
+            <input type="text" id="edit-image" placeholder="img/bg.jpg" oninput="updateContent()">
+            <label>지문 / 대사</label>
+            <textarea id="edit-text" rows="5" oninput="updateContent()"></textarea>
+
+            <h4 style="margin-top:25px; border-top:2px solid #f1f2f6; padding-top:20px;">선택지 설정</h4>
+            <div id="options-list"></div>
+            <button class="btn btn-add" onclick="addOption()">+ 선택지 추가</button>
+        </div>
+    </div>
+</main>
+
+<script>
+    let scenarioData = {
+        config: { startNode: "start", stats: [{ key: "hp", label: "❤️ HP", initial: 100 }] },
+        scenes: { "start": { text: "첫 장면입니다.", image: "", options: [] } }
+    };
+    let currentId = null;
+
+    // --- 불러오기 로직 ---
+    document.getElementById('import-input').onchange = (e) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            try {
+                scenarioData = JSON.parse(ev.target.result);
+                renderNodeList();
+                renderConfig();
+                alert("데이터를 성공적으로 불러왔습니다.");
+            } catch(err) { alert("잘못된 JSON 파일입니다."); }
+        };
+        reader.readAsText(e.target.files[0]);
+    };
+
+    function renderNodeList() {
+        const container = document.getElementById('nodes-container');
+        container.innerHTML = '';
+        Object.keys(scenarioData.scenes).forEach(id => {
+            const div = document.createElement('div');
+            div.className = `node-item ${currentId === id ? 'active' : ''}`;
+            div.innerText = (id === scenarioData.config.startNode ? "🚩 " : "📄 ") + id;
+            div.onclick = () => loadEditor(id);
+            container.appendChild(div);
+        });
+    }
+
+    function loadEditor(id) {
+        currentId = id;
+        document.getElementById('editor-form').style.display = 'block';
+        const node = scenarioData.scenes[id];
+        document.getElementById('display-id').innerText = id;
+        document.getElementById('edit-id').value = id;
+        document.getElementById('edit-text').value = node.text;
+        document.getElementById('edit-image').value = node.image || "";
+        renderOptions();
+        renderNodeList();
+    }
+
+    function updateNodeId() {
+        const newId = document.getElementById('edit-id').value.trim();
+        if(!newId || newId === currentId) return;
+        if(scenarioData.scenes[newId]) { alert("중복된 ID입니다."); document.getElementById('edit-id').value = currentId; return; }
+        
+        scenarioData.scenes[newId] = scenarioData.scenes[currentId];
+        delete scenarioData.scenes[currentId];
+        if(scenarioData.config.startNode === currentId) scenarioData.config.startNode = newId;
+        currentId = newId;
+        renderNodeList();
+    }
+
+    function updateContent() {
+        scenarioData.scenes[currentId].text = document.getElementById('edit-text').value;
+        scenarioData.scenes[currentId].image = document.getElementById('edit-image').value;
+    }
+
+    function renderOptions() {
+        const list = document.getElementById('options-list');
+        list.innerHTML = '';
+        scenarioData.scenes[currentId].options.forEach((opt, i) => {
+            const div = document.createElement('div');
+            div.className = 'opt-card';
+            div.innerHTML = `
+                <input type="text" placeholder="선택지 설명" value="${opt.text}" oninput="updateOpt(${i},'text',this.value)">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:5px;">
+                    <input type="text" placeholder="다음 장면 ID" value="${opt.next}" oninput="updateOpt(${i},'next',this.value)">
+                    <input type="number" placeholder="확률(%)" value="${opt.chance||100}" oninput="updateOpt(${i},'chance',parseInt(this.value))">
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:5px; margin-top:5px;">
+                    <input type="text" placeholder="필요 아이템" value="${opt.requireItem||''}" oninput="updateOpt(${i},'requireItem',this.value)">
+                    <input type="text" placeholder="획득 아이템" value="${opt.getItem||''}" oninput="updateOpt(${i},'getItem',this.value)">
+                    <input type="text" placeholder="소모 아이템" value="${opt.useItem||''}" oninput="updateOpt(${i},'useItem',this.value)">
+                </div>
+                <label style="margin:5px 0 0; font-size:0.75em;">스탯 변화 (JSON: {"hp":-10})</label>
+                <input type="text" value='${JSON.stringify(opt.effects||{})}' oninput="updateOpt(${i},'effects',this.value,true)">
+                <button class="btn-del" style="position:absolute; top:10px; right:10px;" onclick="removeOpt(${i})">✕</button>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    function updateOpt(i, key, val, isJson=false) {
+        if(isJson) {
+            try { scenarioData.scenes[currentId].options[i][key] = JSON.parse(val); } catch(e) {}
+        } else {
+            scenarioData.scenes[currentId].options[i][key] = val;
+        }
+    }
+
+    function addOption() { scenarioData.scenes[currentId].options.push({text:"", next:currentId, effects:{}}); renderOptions(); }
+    function removeOpt(i) { scenarioData.scenes[currentId].options.splice(i,1); renderOptions(); }
+    function addNode() { const id = "node_"+Date.now(); scenarioData.scenes[id] = {text:"새 지문입니다.", options:[]}; loadEditor(id); }
+
+    function renderConfig() {
+        const div = document.getElementById('stats-config-list');
+        div.innerHTML = '';
+        scenarioData.config.stats.forEach((s, i) => {
+            const row = document.createElement('div');
+            row.style = "display:flex; gap:5px; margin-bottom:5px;";
+            row.innerHTML = `
+                <input type="text" value="${s.key}" onchange="scenarioData.config.stats[${i}].key=this.value">
+                <input type="text" value="${s.label}" onchange="scenarioData.config.stats[${i}].label=this.value">
+                <input type="number" value="${s.initial}" onchange="scenarioData.config.stats[${i}].initial=parseInt(this.value)">
+                <button class="btn-del" onclick="scenarioData.config.stats.splice(${i},1); renderConfig()">✕</button>
+            `;
+            div.appendChild(row);
+        });
+    }
+    function addStatField() { scenarioData.config.stats.push({key:"stat", label:"이름", initial:0}); renderConfig(); }
+
+    function exportJSON() {
+        const blob = new Blob([JSON.stringify(scenarioData, null, 2)], {type:"application/json"});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "scenario.json"; a.click();
+    }
+    renderNodeList();
+    renderConfig();
+</script>
+</body>
+</html>
