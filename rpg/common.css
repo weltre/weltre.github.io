@@ -2,8 +2,8 @@
     --bg: #0f1115; --card: #1a1d23; --btn: #2c3e50; --text: #e0e0e0; 
     --point: #0097e6; --danger: #c0392b; --orange: #e67e22;
 }
-body { background: var(--bg); color: var(--text); font-family: 'Pretendard', sans-serif; margin: 0; line-height: 1.6; overflow-x: hidden; }
-.container { max-width: 750px; margin: 0 auto; padding: 40px 20px; }
+body { background: var(--bg); color: var(--text); font-family: 'Pretendard', sans-serif; margin: 0; line-height: 1.6; }
+.container { max-width: 800px; margin: 0 auto; padding: 40px 20px; }
 
 /* 커스텀 메시지 박스 */
 #msg-box { 
@@ -14,9 +14,10 @@ body { background: var(--bg); color: var(--text); font-family: 'Pretendard', san
 }
 #msg-box button { background: var(--point); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; margin-top: 20px; width: 100%; font-weight: bold; }
 
-.btn { cursor: pointer; padding: 10px 15px; border: none; border-radius: 5px; font-weight: bold; color: white; transition: 0.2s; display: inline-block; text-align: center; }
+.btn { cursor: pointer; padding: 10px 15px; border: none; border-radius: 5px; font-weight: bold; color: white; transition: 0.2s; display: inline-block; text-align: center; font-size: 0.85em; }
 .btn-blue { background: var(--point); }
 .btn-orange { background: var(--orange); }
 .btn-red { background: var(--danger); }
 
-input, textarea { width: 100%; padding: 12px; background: #252a31; border: 1px solid #3d444d; color: white; border-radius: 6px; box-sizing: border-box; }
+input, textarea, select { width: 100%; padding: 10px; background: #252a31; border: 1px solid #3d444d; color: white; border-radius: 6px; box-sizing: border-box; }
+.flex-between { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
