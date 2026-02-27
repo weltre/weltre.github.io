@@ -1,106 +1,41 @@
 {
   "config": {
-    "title": "심해의 부름 (The Deep Call)",
+    "title": "심해의 부름",
     "themeColor": "#00d2ff",
-    "subColor": "#ff4757",
-    "startNode": "start",
     "stats": [
-      { "key": "oxygen", "label": "산소도", "initial": 100 },
-      { "key": "sanity", "label": "정신력", "initial": 50 }
-    ]
+      { "key": "hp", "label": "체력", "initial": 100 }
+    ],
+    "startNode": "start"
   },
   "scenes": {
     "start": {
-      "text": "당신은 심해 4,000m 아래 침몰한 연구선 입구에 서 있습니다. 수압이 슈트를 압박하고, 산소 탱크의 잔량이 눈앞에 점멸합니다.\n\n어두운 복도 끝에서 희미한 빛이 보입니다.",
+      "text": "침몰한 연구선 앞에 서 있다.",
       "options": [
         {
-          "text": "복도를 조사한다 (산소 -10)",
-          "next": "corridor",
-          "effects": { "oxygen": -10 }
-        },
-        {
-          "text": "슈트를 점검하며 대기한다 (클릭 제한: 2회)",
-          "next": "start",
-          "maxClicks": 2,
-          "effects": { "sanity": 5 }
-        }
-      ]
-    },
-    "corridor": {
-      "text": "복도는 좁고 축축합니다. 바닥에 버려진 '낡은 비상 가방' 하나가 보입니다.\n가방을 열어보시겠습니까?",
-      "options": [
-        {
-          "text": "가방을 뒤진다 (확률 발생)",
-          "results": [
-            {
-              "chance": 40,
-              "message": "운 좋게 보조 산소 탱크를 찾았습니다! (산소 +30)",
-              "effects": { "oxygen": 30 },
-              "next": "corridor"
-            },
-            {
-              "chance": 40,
-              "message": "가방 안에는 녹슨 '손전등'이 들어있었습니다.",
-              "getItem": "손전등",
-              "next": "corridor"
-            },
-            {
-              "chance": 20,
-              "message": "가방 안에서 심해어가 튀어나와 당신을 공격합니다! (정신력 -20)",
-              "effects": { "sanity": -20 },
-              "next": "corridor"
-            }
-          ]
-        },
-        {
-          "text": "잠긴 격벽으로 향한다",
-          "next": "gate"
-        }
-      ]
-    },
-    "gate": {
-      "text": "두꺼운 강철 격벽이 앞을 가로막고 있습니다. 틈새가 좁아 손전등 없이는 내부를 확인할 수 없습니다.",
-      "options": [
-        {
-          "text": "손전등으로 틈새를 비춘다",
-          "requireItem": "손전등",
-          "next": "inner_room"
-        },
-        {
-          "text": "무력으로 문을 연다 (산소 -20)",
-          "effects": { "oxygen": -20 },
-          "next": "inner_room"
-        },
-        {
-          "text": "처음으로 돌아가기 (리셋)",
-          "isReset": true
+          "text": "문을 연다",
+          "next": "inside",
+          "effects": { "hp": -10 }
         }
       ],
       "autoEvents": [
         {
-          "statKey": "oxygen",
+          "statKey": "hp",
           "threshold": 1,
-          "next": "game_over",
-          "message": "산소가 바닥났습니다. 시야가 흐려지며 의식을 잃습니다..."
+          "next": "dead",
+          "message": "체력이 바닥났다."
         }
       ]
     },
-    "inner_room": {
-      "text": "내부에는 고대 유물로 보이는 거대한 석판이 놓여 있습니다. 석판을 만지는 순간, 당신의 모든 기억이 요동칩니다.\n\n축하합니다. 당신은 심해의 진실에 도달했습니다.",
+    "inside": {
+      "text": "어두운 내부다.",
       "options": [
-        {
-          "text": "새로운 탐사 시작 (리셋)",
-          "isReset": true
-        }
+        { "text": "다시 시작", "isReset": true }
       ]
     },
-    "game_over": {
-      "text": "당신은 차가운 심해의 일부가 되었습니다.\nGAME OVER",
+    "dead": {
+      "text": "GAME OVER",
       "options": [
-        {
-          "text": "다시 시작",
-          "isReset": true
-        }
+        { "text": "재시작", "isReset": true }
       ]
     }
   }
