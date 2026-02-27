@@ -1,417 +1,370 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<title>ENGINE v6.3.0 FIXED</title>
+<meta charset="UTF-8" />
+<title>Story Engine v7</title>
 
 <style>
-:root{
- --bg:#0f1115;--card:#1a1d23;--text:#e0e0e0;
- --point:#00d2ff;--sub:#ff4757;--border:#333;
+:root {
+  --bg:#0f1115; --card:#1a1d23; --text:#e0e0e0;
+  --point:#00d2ff; --sub:#ff4757; --border:#333;
 }
-body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui}
-nav{display:flex;gap:8px;padding:8px;background:#15181c;border-bottom:1px solid var(--border)}
-.nav-btn{padding:10px 16px;border:0;background:none;color:#888;font-weight:700;cursor:pointer}
-.nav-btn.active{color:var(--point);border-bottom:3px solid var(--point)}
-.btn{padding:8px 12px;border-radius:6px;border:0;font-weight:700;cursor:pointer}
-.blue{background:var(--point);color:#000}
-.red{background:#ff4757;color:#fff}
-.orange{background:#ff9f43;color:#000}
-
-.container{max-width:1100px;margin:auto;height:calc(100vh - 50px);display:flex}
-#player,#maker{flex:1;display:none;padding:16px;box-sizing:border-box}
-#player{flex-direction:column}
-
-.panel{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px}
-#scene{white-space:pre-wrap;line-height:1.6}
-.game-btn{width:100%;text-align:left;padding:14px;margin-top:8px;
-background:#1e2228;border:1px solid var(--border);
-border-left:5px solid var(--point);color:#fff;border-radius:8px;cursor:pointer}
-.game-btn:disabled{opacity:.4}
-
-#maker{display:flex;gap:10px}
-#nodes{width:260px;overflow:auto}
-#editor{flex:1;overflow:auto}
-
-input,textarea,select{
-width:100%;background:#000;color:#fff;border:1px solid var(--border);
-border-radius:5px;padding:6px;margin-top:4px;box-sizing:border-box
+* { box-sizing:border-box; }
+body {
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:system-ui, sans-serif;
 }
-textarea{resize:vertical}
-hr{border:0;border-top:1px solid var(--border);margin:12px 0}
-
-.small{font-size:12px;color:#aaa}
-.row{display:flex;gap:6px}
-.card{border:1px solid #444;border-radius:8px;padding:8px;margin-top:8px;background:#1e2228}
-
-#modal{
-position:fixed;inset:0;background:rgba(0,0,0,.7);
-display:none;align-items:center;justify-content:center
+button,input,textarea,select {
+  background:#000; color:#fff; border:1px solid var(--border);
+  border-radius:6px; padding:8px;
 }
-#modalBox{
-background:var(--card);border:2px solid var(--sub);
-padding:20px;border-radius:12px;width:420px
+button { cursor:pointer; font-weight:600; }
+nav {
+  display:flex; border-bottom:1px solid var(--border);
+  background:#15181c;
 }
+.nav-btn {
+  flex:1; padding:14px; background:none; border:none;
+  color:#888;
+}
+.nav-btn.active {
+  color:var(--point); border-bottom:3px solid var(--point);
+}
+.container { max-width:1100px; margin:auto; height:100vh; display:flex; flex-direction:column; }
+.view { flex:1; display:none; padding:16px; overflow:hidden; }
+.card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:10px; padding:12px; margin-top:10px;
+}
+.list { display:flex; flex-direction:column; gap:8px; }
+.game-btn {
+  width:100%; padding:14px; text-align:left;
+  border-left:4px solid var(--point);
+}
+.game-btn:disabled { opacity:.35; cursor:not-allowed; }
+#scene-scroll { flex:1; overflow-y:auto; }
+#status { margin-bottom:8px; color:var(--point); font-weight:700; }
+#inv { font-size:13px; color:var(--sub); margin-bottom:10px; }
+.split { display:flex; height:100%; }
+#nodes { width:260px; border-right:1px solid var(--border); padding:10px; overflow-y:auto; }
+#editor { flex:1; padding:16px; overflow-y:auto; }
+.small { font-size:12px; opacity:.8; }
+.warn { color:#ff6b6b; font-size:12px; }
 </style>
 </head>
 
 <body>
+<div class="container">
 
 <nav>
-<button class="nav-btn active" data-tab="player">PLAY</button>
-<button class="nav-btn" data-tab="maker">MAKER</button>
-<input type="file" id="loader" hidden>
-<button class="btn orange" onclick="loader.click()">LOAD JSON</button>
-<button class="btn orange" onclick="saveJSON()">SAVE JSON</button>
+  <button class="nav-btn active" onclick="switchTab('play')">PLAY</button>
+  <button class="nav-btn" onclick="switchTab('maker')">MAKER</button>
+  <button class="nav-btn" onclick="downloadJSON()">💾 SAVE</button>
+  <input type="file" id="loadFile" hidden onchange="loadJSON(event)">
+  <button class="nav-btn" onclick="document.getElementById('loadFile').click()">📂 LOAD</button>
 </nav>
 
-<div class="container">
-<div id="player">
-<div class="panel" id="status"></div>
-<div class="panel" id="inv"></div>
-<div class="panel" id="scene"></div>
-<div id="choices"></div>
+<!-- PLAY -->
+<div id="play" class="view" style="display:flex;flex-direction:column;">
+  <div id="status"></div>
+  <div id="inv"></div>
+  <div id="scene-scroll">
+    <pre id="scene-text"></pre>
+  </div>
+  <div id="options" class="list"></div>
 </div>
 
-<div id="maker">
-<div id="nodes">
-<button class="btn blue" style="width:100%" onclick="addNode()">+ NODE</button>
-<div id="nodeList"></div>
+<!-- MAKER -->
+<div id="maker" class="view">
+  <div class="split">
+
+    <div id="nodes">
+      <button onclick="addScene()">+ 장면 추가</button>
+      <div id="nodeList" class="list"></div>
+    </div>
+
+    <div id="editor">
+      <div class="card">
+        <h3>GLOBAL CONFIG</h3>
+        <input id="cfg-title" placeholder="게임 제목">
+        <input id="cfg-start" placeholder="시작 Node ID">
+        <label>Theme <input type="color" id="cfg-theme"></label>
+        <div id="statList"></div>
+        <button onclick="addStat()">+ 스탯</button>
+      </div>
+
+      <div id="sceneEditor"></div>
+      <div id="validation" class="warn"></div>
+    </div>
+
+  </div>
 </div>
 
-<div id="editor">
-<div class="card">
-<b>GLOBAL CONFIG</b>
-<input id="cfgTitle">
-<div class="row">
-<input type="color" id="cfgMain">
-<input type="color" id="cfgSub">
-</div>
-<div id="statList"></div>
-<button class="btn blue" onclick="addStat()">+ STAT</button>
-</div>
-
-<div id="nodeEditor" style="display:none">
-<hr>
-<input id="nodeId">
-<textarea id="nodeText" rows="4"></textarea>
-<button class="btn blue" onclick="addOption()">+ OPTION</button>
-<button class="btn orange" onclick="addAuto()">+ AUTO EVENT</button>
-<div id="autoList"></div>
-<div id="optList"></div>
-</div>
-</div>
-</div>
-
-<div id="modal">
-<div id="modalBox">
-<div id="modalText"></div>
-<button class="btn blue" style="width:100%" onclick="closeModal()">OK</button>
-</div>
 </div>
 
 <script>
-/* ================== DATA ================== */
-let sc={
-config:{title:"",themeColor:"#00d2ff",subColor:"#ff4757",startNode:"start",stats:[]},
-scenes:{}
-}
-let curNode=null
-let state={stats:{},inv:new Set(),clicks:{},next:null}
+/* =====================
+   DATA MODEL
+===================== */
 
-/* ================== UTIL ================== */
-const $=id=>document.getElementById(id)
-function msg(t,n){$("modalText").innerText=t;$("modal").style.display="flex";state.next=n}
-function closeModal(){$("modal").style.display="none";if(state.next)render(state.next)}
+let scenario = {
+  config:{
+    title:"예제 게임",
+    themeColor:"#00d2ff",
+    startNode:"start",
+    stats:[{key:"hp",label:"체력",initial:100}]
+  },
+  scenes:{
+    start:{
+      text:"시작 장면입니다.",
+      options:[]
+    }
+  }
+};
 
-/* ================== TABS ================== */
-document.querySelectorAll(".nav-btn").forEach(b=>{
-b.onclick=()=>{
-document.querySelectorAll(".nav-btn").forEach(x=>x.classList.remove("active"))
-b.classList.add("active")
-$("player").style.display=b.dataset.tab==="player"?"flex":"none"
-$("maker").style.display=b.dataset.tab==="maker"?"flex":"none"
-if(b.dataset.tab==="player")initPlayer()
-}
-})
+let runtime = {};
+let currentNode = null;
 
-/* ================== LOAD / SAVE ================== */
-loader.onchange=e=>{
-const r=new FileReader()
-r.onload=ev=>{
-sc=JSON.parse(ev.target.result)
-applyTheme()
-renderMaker()
-initPlayer()
-}
-r.readAsText(e.target.files[0])
-}
+/* =====================
+   UTIL
+===================== */
 
-function saveJSON(){
-const a=document.createElement("a")
-a.href=URL.createObjectURL(new Blob([JSON.stringify(sc,null,2)],{type:"application/json"}))
-a.download=(sc.config.title||"scenario")+".json"
-a.click()
-}
+const $ = id => document.getElementById(id);
 
-/* ================== PLAYER ================== */
-function initPlayer(){
-state={stats:{},inv:new Set(),clicks:{},next:null}
-sc.config.stats.forEach(s=>state.stats[s.key]=Number(s.initial)||0)
-render(sc.config.startNode)
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+
+/* =====================
+   TABS
+===================== */
+
+function switchTab(tab){
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  document.querySelectorAll('.view').forEach(v=>v.style.display='none');
+  $(tab).style.display='flex';
+  if(tab==='play') startGame();
+  if(tab==='maker') renderMaker();
 }
 
-function render(id){
-const n=sc.scenes[id]; if(!n){msg("NODE 없음:"+id);return}
+/* =====================
+   PLAYER
+===================== */
 
-if(n.autoEvents){
-for(const e of n.autoEvents){
-if((state.stats[e.statKey]||0)<(e.threshold||0)){
-msg(e.message,e.next||id);return
-}}}
-
-$("status").innerHTML=sc.config.stats.map(s=>`${s.label}: ${state.stats[s.key]}`).join(" | ")
-$("inv").innerText="🎒 "+(state.inv.size?[...state.inv].join(", "):"없음")
-$("scene").innerText=n.text
-$("choices").innerHTML=""
-
-;(n.options||[]).forEach((o,i)=>{
-const k=id+"_"+i
-if(o.maxClicks && (state.clicks[k]||0)>=o.maxClicks)return
-let ok=true,miss=[]
-if(o.requireItem)o.requireItem.split(",").forEach(v=>{
-v=v.trim();if(v&&!state.inv.has(v)){ok=false;miss.push(v)}
-})
-const b=document.createElement("button")
-b.className="game-btn"
-b.disabled=!ok
-b.innerText=o.text+(o.maxClicks?` (${state.clicks[k]||0}/${o.maxClicks})`:"")+(ok?"":` [필요:${miss}]`)
-b.onclick=()=>{
-state.clicks[k]=(state.clicks[k]||0)+1
-if(o.isReset)return initPlayer()
-apply(o)
-if(o.results){
-let sum=o.results.reduce((a,r)=>a+(r.chance||0),0)
-let r=Math.random()*sum,acc=0,res=o.results.at(-1)
-for(const x of o.results){acc+=x.chance;if(r<=acc){res=x;break}}
-apply(res);msg(res.message,res.next||id)
-}else render(o.next||id)
-}
-$("choices").appendChild(b)
-})
+function startGame(){
+  runtime = {
+    stats:{},
+    inv:new Set(),
+    clicks:{}
+  };
+  scenario.config.stats.forEach(s=>runtime.stats[s.key]=s.initial);
+  applyTheme();
+  goNode(scenario.config.startNode);
 }
 
-function apply(o){
-if(o.effects)for(const k in o.effects)state.stats[k]=(state.stats[k]||0)+Number(o.effects[k])
-if(o.getItem)o.getItem.split(",").forEach(v=>state.inv.add(v.trim()))
-if(o.removeItem)o.removeItem.split(",").forEach(v=>state.inv.delete(v.trim()))
+function goNode(id){
+  const node = scenario.scenes[id];
+  if(!node) return;
+  currentNode = id;
+
+  if(node.autoEvents){
+    for(const e of node.autoEvents){
+      if((runtime.stats[e.statKey]||0) < e.threshold){
+        alert(e.message);
+        goNode(e.next);
+        return;
+      }
+    }
+  }
+
+  $('scene-text').textContent = node.text;
+  $('status').textContent =
+    scenario.config.stats.map(s=>`${s.label}: ${runtime.stats[s.key]}`).join(" | ");
+  $('inv').textContent =
+    "🎒 " + (runtime.inv.size? [...runtime.inv].join(", "):"소지품 없음");
+
+  const box = $('options');
+  box.innerHTML="";
+
+  (node.options||[]).forEach((o,i)=>{
+    const key = id+"_"+i;
+    if(o.maxClicks && (runtime.clicks[key]||0)>=o.maxClicks) return;
+
+    const btn = document.createElement('button');
+    btn.className="game-btn";
+    btn.textContent=o.text;
+
+    if(o.requireItem){
+      const miss = o.requireItem.split(',').map(v=>v.trim()).filter(v=>!runtime.inv.has(v));
+      if(miss.length){
+        btn.disabled=true;
+        btn.title="필요: "+miss.join(",");
+      }
+    }
+
+    btn.onclick=()=>{
+      runtime.clicks[key]=(runtime.clicks[key]||0)+1;
+      if(o.isReset){ startGame(); return; }
+
+      applyEffects(o);
+
+      if(o.results?.length){
+        let roll=Math.random()*100,acc=0,res=o.results.at(-1);
+        for(const r of o.results){
+          acc+=r.chance;
+          if(roll<=acc){ res=r; break; }
+        }
+        if(res.message) alert(res.message);
+        applyEffects(res);
+        goNode(res.next||id);
+      }else{
+        goNode(o.next||id);
+      }
+    };
+    box.appendChild(btn);
+  });
 }
 
-/* ================== MAKER ================== */
-function applyTheme(){
-document.documentElement.style.setProperty("--point",sc.config.themeColor)
-document.documentElement.style.setProperty("--sub",sc.config.subColor)
-$("cfgTitle").value=sc.config.title
-$("cfgMain").value=sc.config.themeColor
-$("cfgSub").value=sc.config.subColor
+function applyEffects(o){
+  if(o.effects) for(const k in o.effects)
+    runtime.stats[k]=(runtime.stats[k]||0)+Number(o.effects[k]);
+  if(o.getItem) o.getItem.split(',').forEach(v=>runtime.inv.add(v.trim()));
+  if(o.removeItem) o.removeItem.split(',').forEach(v=>runtime.inv.delete(v.trim()));
 }
 
-$("cfgTitle").oninput=e=>sc.config.title=e.target.value
-$("cfgMain").oninput=e=>{sc.config.themeColor=e.target.value;applyTheme()}
-$("cfgSub").oninput=e=>{sc.config.subColor=e.target.value;applyTheme()}
+/* =====================
+   MAKER
+===================== */
 
 function renderMaker(){
-renderNodes();renderStats();loadNode(sc.config.startNode)
+  applyTheme();
+  $('cfg-title').value=scenario.config.title;
+  $('cfg-start').value=scenario.config.startNode;
+  $('cfg-theme').value=scenario.config.themeColor;
+
+  $('cfg-title').oninput=e=>scenario.config.title=e.target.value;
+  $('cfg-start').oninput=e=>scenario.config.startNode=e.target.value;
+  $('cfg-theme').oninput=e=>{
+    scenario.config.themeColor=e.target.value;
+    applyTheme();
+  };
+
+  renderStats();
+  renderNodeList();
 }
 
-function renderNodes(){
-$("nodeList").innerHTML=""
-Object.keys(sc.scenes).forEach(id=>{
-const d=document.createElement("div")
-d.className="game-btn";d.innerText=id
-d.onclick=()=>loadNode(id)
-$("nodeList").appendChild(d)
-})
-}
-
-function loadNode(id){
-curNode=id
-$("nodeEditor").style.display="block"
-$("nodeId").value=id
-$("nodeText").value=sc.scenes[id].text
-$("nodeText").oninput=e=>sc.scenes[id].text=e.target.value
-renderOptions();renderAutos()
-}
-
-$("nodeId").onblur=e=>{
-const n=e.target.value.trim()
-if(n&&n!==curNode){
-sc.scenes[n]=sc.scenes[curNode];delete sc.scenes[curNode]
-Object.values(sc.scenes).forEach(s=>{
-;(s.options||[]).forEach(o=>{
-if(o.next===curNode)o.next=n
-;(o.results||[]).forEach(r=>{if(r.next===curNode)r.next=n})
-})
-;(s.autoEvents||[]).forEach(a=>{if(a.next===curNode)a.next=n})
-})
-if(sc.config.startNode===curNode)sc.config.startNode=n
-curNode=n;renderNodes()
-}
-}
-
-/* -------- STATS -------- */
 function renderStats(){
-$("statList").innerHTML=""
-sc.config.stats.forEach((s,i)=>{
-const d=document.createElement("div");d.className="row"
-d.innerHTML=`
-<input value="${s.label}">
-<input value="${s.key}">
-<input type="number" value="${s.initial}">
-<button class="btn red">X</button>`
-const [l,k,v,x]=d.children
-l.oninput=()=>s.label=l.value
-k.oninput=()=>s.key=k.value
-v.oninput=()=>s.initial=Number(v.value)
-x.onclick=()=>{sc.config.stats.splice(i,1);renderStats()}
-$("statList").appendChild(d)
-})
-}
-function addStat(){sc.config.stats.push({key:"stat_"+Date.now(),label:"NEW",initial:0});renderStats()}
-
-/* -------- OPTIONS -------- */
-function renderOptions(){
-$("optList").innerHTML=""
-;(sc.scenes[curNode].options||[]).forEach((o,i)=>{
-const c=document.createElement("div");c.className="card"
-c.innerHTML=`
-<input value="${o.text||""}">
-<div class="row">
-<input placeholder="next" value="${o.next||""}">
-<input type="number" placeholder="max" value="${o.maxClicks||""}">
-<input placeholder="require" value="${o.requireItem||""}">
-</div>
-<div class="row">
-<input placeholder="get" value="${o.getItem||""}">
-<input placeholder="remove" value="${o.removeItem||""}">
-<label><input type="checkbox"${o.isReset?"checked":""}> reset</label>
-</div>
-<div class="small">EFFECTS</div>
-<div class="row effects"></div>
-<button class="btn orange">+ RESULT</button>
-<button class="btn red">DELETE</button>
-`
-const [t,n,m,rq,g,rm,chk]=c.querySelectorAll("input")
-t.oninput=()=>o.text=t.value
-n.oninput=()=>o.next=n.value
-m.oninput=()=>o.maxClicks=Number(m.value)
-rq.oninput=()=>o.requireItem=rq.value
-g.oninput=()=>o.getItem=g.value
-rm.oninput=()=>o.removeItem=rm.value
-chk.onchange=()=>o.isReset=chk.checked
-
-renderEffects(c.querySelector(".effects"),o.effects||={},v=>o.effects=v)
-
-c.querySelector(".orange").onclick=()=>{
-o.results=o.results||[]
-o.results.push({chance:50,message:"",next:""})
-renderOptions()
-}
-c.querySelector(".red").onclick=()=>{
-sc.scenes[curNode].options.splice(i,1)
-renderOptions()
-}
-$("optList").appendChild(c)
-
-;(o.results||[]).forEach((r,ri)=>{
-const rd=document.createElement("div");rd.className="card"
-rd.innerHTML=`
-<input type="number" value="${r.chance}">
-<input placeholder="next" value="${r.next||""}">
-<textarea>${r.message||""}</textarea>
-<div class="row effects"></div>
-<button class="btn red">DEL RESULT</button>`
-const [ch,nx,tx]=rd.querySelectorAll("input,textarea")
-ch.oninput=()=>r.chance=Number(ch.value)
-nx.oninput=()=>r.next=nx.value
-tx.oninput=()=>r.message=tx.value
-renderEffects(rd.querySelector(".effects"),r.effects||={},v=>r.effects=v)
-rd.querySelector(".red").onclick=()=>{
-o.results.splice(ri,1);renderOptions()
-}
-$("optList").appendChild(rd)
-})
-})
+  const box=$('statList'); box.innerHTML="";
+  scenario.config.stats.forEach((s,i)=>{
+    const d=document.createElement('div');
+    d.innerHTML=`
+      <input value="${s.label}" placeholder="label"
+        oninput="scenario.config.stats[${i}].label=this.value">
+      <input value="${s.key}" placeholder="key"
+        oninput="scenario.config.stats[${i}].key=this.value">
+      <input type="number" value="${s.initial}"
+        oninput="scenario.config.stats[${i}].initial=Number(this.value)">
+    `;
+    box.appendChild(d);
+  });
 }
 
-function renderEffects(box,obj,setter){
-box.innerHTML=""
-Object.keys(obj).forEach(k=>{
-const d=document.createElement("div");d.className="row"
-d.innerHTML=`<input value="${k}"><input type="number" value="${obj[k]}"><button class="btn red">X</button>`
-const [kk,v,x]=d.children
-kk.oninput=()=>{obj[kk.value]=obj[k];delete obj[k]}
-v.oninput=()=>obj[kk.value]=Number(v.value)
-x.onclick=()=>{delete obj[k];renderEffects(box,obj,setter)}
-box.appendChild(d)
-})
-const add=document.createElement("button")
-add.className="btn blue";add.innerText="+ EFFECT"
-add.onclick=()=>{
-obj[sc.config.stats[0]?.key||"stat"]=0
-renderEffects(box,obj,setter)
-}
-box.appendChild(add)
-setter(obj)
+function renderNodeList(){
+  const box=$('nodeList'); box.innerHTML="";
+  Object.keys(scenario.scenes).forEach(id=>{
+    const b=document.createElement('button');
+    b.textContent=id;
+    b.onclick=()=>editScene(id);
+    box.appendChild(b);
+  });
 }
 
-function addOption(){
-sc.scenes[curNode].options=sc.scenes[curNode].options||[]
-sc.scenes[curNode].options.push({text:"NEW OPTION",next:curNode})
-renderOptions()
+function editScene(id){
+  const n=scenario.scenes[id];
+  const ed=$('sceneEditor');
+  ed.innerHTML=`
+    <div class="card">
+      <input value="${id}" onchange="renameScene('${id}',this.value)">
+      <textarea oninput="scenario.scenes['${id}'].text=this.value">${n.text}</textarea>
+      <div id="optBox"></div>
+      <button onclick="addOption('${id}')">+ 선택지</button>
+    </div>`;
+  renderOptions(id);
 }
 
-/* -------- AUTO EVENTS -------- */
-function renderAutos(){
-$("autoList").innerHTML=""
-;(sc.scenes[curNode].autoEvents||[]).forEach((a,i)=>{
-const d=document.createElement("div");d.className="card"
-d.innerHTML=`
-<select></select>
-<input type="number" value="${a.threshold}">
-<input placeholder="next" value="${a.next||""}">
-<textarea>${a.message||""}</textarea>
-<button class="btn red">DELETE</button>`
-const sel=d.querySelector("select")
-sc.config.stats.forEach(s=>{
-const o=document.createElement("option")
-o.value=s.key;o.text=s.label
-if(s.key===a.statKey)o.selected=true
-sel.appendChild(o)
-})
-sel.onchange=()=>a.statKey=sel.value
-d.querySelectorAll("input")[0].oninput=e=>a.threshold=Number(e.target.value)
-d.querySelectorAll("input")[1].oninput=e=>a.next=e.target.value
-d.querySelector("textarea").oninput=e=>a.message=e.target.value
-d.querySelector(".red").onclick=()=>{
-sc.scenes[curNode].autoEvents.splice(i,1);renderAutos()
-}
-$("autoList").appendChild(d)
-})
+function renderOptions(id){
+  const box=$('optBox'); box.innerHTML="";
+  scenario.scenes[id].options.forEach((o,i)=>{
+    const d=document.createElement('div');
+    d.className="card";
+    d.innerHTML=`
+      <input value="${o.text||''}"
+        oninput="scenario.scenes['${id}'].options[${i}].text=this.value">
+      <input placeholder="next" value="${o.next||''}"
+        oninput="scenario.scenes['${id}'].options[${i}].next=this.value">
+      <textarea placeholder="effects JSON"
+        oninput="scenario.scenes['${id}'].options[${i}].effects=JSON.parse(this.value)">
+${JSON.stringify(o.effects||{},null,2)}</textarea>
+    `;
+    box.appendChild(d);
+  });
 }
 
-function addAuto(){
-sc.scenes[curNode].autoEvents=sc.scenes[curNode].autoEvents||[]
-sc.scenes[curNode].autoEvents.push({
-statKey:sc.config.stats[0]?.key||"",
-threshold:0,next:"",message:""
-})
-renderAutos()
+function addScene(){
+  const id="node_"+Date.now();
+  scenario.scenes[id]={text:"",options:[]};
+  renderNodeList(); editScene(id);
 }
 
-/* ================== INIT ================== */
-$("player").style.display="flex"
+function addOption(id){
+  scenario.scenes[id].options.push({text:"선택지",next:id});
+  renderOptions(id);
+}
+
+function renameScene(oldId,newId){
+  if(!newId||scenario.scenes[newId]) return;
+  scenario.scenes[newId]=scenario.scenes[oldId];
+  delete scenario.scenes[oldId];
+  Object.values(scenario.scenes).forEach(s=>{
+    s.options?.forEach(o=>{
+      if(o.next===oldId) o.next=newId;
+      o.results?.forEach(r=>{ if(r.next===oldId) r.next=newId; });
+    });
+    s.autoEvents?.forEach(a=>{ if(a.next===oldId) a.next=newId; });
+  });
+  renderNodeList(); editScene(newId);
+}
+
+/* =====================
+   IO / THEME
+===================== */
+
+function applyTheme(){
+  document.documentElement.style.setProperty('--point',scenario.config.themeColor);
+}
+
+function downloadJSON(){
+  validate();
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(scenario,null,2)]));
+  a.download="scenario.json";
+  a.click();
+}
+
+function loadJSON(e){
+  const r=new FileReader();
+  r.onload=ev=>{
+    scenario=JSON.parse(ev.target.result);
+    renderMaker();
+  };
+  r.readAsText(e.target.files[0]);
+}
+
+function validate(){
+  let warn=[];
+  if(!scenario.scenes[scenario.config.startNode])
+    warn.push("startNode가 존재하지 않습니다.");
+  $('validation').textContent=warn.join(" / ");
+}
 </script>
-
 </body>
 </html>
