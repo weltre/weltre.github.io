@@ -1,14 +1,12 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <title>Adventure Player v6.1.2</title>
-    <link rel="stylesheet" href="common.css">
+    <meta charset="UTF-8"><title>Adventure Player v6.1.7</title><link rel="stylesheet" href="common.css">
 </head>
 <body>
     <div id="load-screen" class="container" style="justify-content: center; align-items: center;">
-        <h1 style="color:var(--point)">🎮 ENGINE v6.1.2</h1>
-        <input type="file" id="loader" accept=".json" style="padding:20px; border:2px dashed var(--border); width:auto;">
+        <h1 style="color:var(--point)">🎮 ENGINE v6.1.7</h1>
+        <input type="file" id="loader" accept=".json" style="padding:20px; border:2px dashed var(--border);">
     </div>
     <div id="game-ui" class="container" style="display:none">
         <div id="status-bar"></div>
@@ -40,24 +38,18 @@
         renderNode(scenario.config.startNode);
     }
 
-    const processItems = (getStr, removeStr) => {
-        if(getStr) getStr.split(',').forEach(i => { const t = i.trim(); if(t) state.inventory.add(t); });
-        if(removeStr) removeStr.split(',').forEach(i => { const t = i.trim(); if(t) state.inventory.delete(t); });
-    };
-
     function renderNode(nodeId) {
         const node = scenario.scenes[nodeId];
         if(!node) return;
-        
         if(node.autoEvents) {
             for(let ev of node.autoEvents) {
                 if((state.stats[ev.statKey] || 0) < (ev.threshold || 0)) return showMsg(ev.message, ev.next || nodeId);
             }
         }
-
         updateUI();
         document.getElementById('scene-text').innerText = node.text;
-        const box = document.getElementById('options-box'); box.innerHTML = '';
+        const box = document.getElementById('options-box'); 
+        box.innerHTML = '';
 
         node.options.forEach((opt, idx) => {
             const optKey = `${nodeId}_${idx}`;
@@ -66,48 +58,35 @@
             const btn = document.createElement('button');
             btn.className = 'game-btn'; btn.innerText = opt.text;
 
-            let canAfford = true, missingItems = [];
-            if(opt.effects) Object.keys(opt.effects).forEach(k => { if((state.stats[k] || 0) + opt.effects[k] < 0) canAfford = false; });
-            if(opt.requireItem) {
-                opt.requireItem.split(',').forEach(item => {
-                    const t = item.trim(); if(t && !state.inventory.has(t)) { canAfford = false; missingItems.push(t); }
-                });
-            }
+            let canAfford = true, missing = [];
+            if(opt.effects) Object.keys(opt.effects).forEach(k => { if((state.stats[k] || 0) + (opt.effects[k] || 0) < 0) canAfford = false; });
+            if(opt.requireItem) opt.requireItem.split(',').forEach(i => { if(i.trim() && !state.inventory.has(i.trim())) { canAfford = false; missing.push(i.trim()); } });
 
-            if(!canAfford) {
-                btn.disabled = true;
-                btn.innerText += missingItems.length > 0 ? ` [필요: ${missingItems.join(', ')}]` : " [조건 부족]";
-            }
+            if(!canAfford) { btn.disabled = true; btn.innerText += " (조건 부족)"; }
 
             btn.onclick = () => {
                 state.clickCounts[optKey] = (state.clickCounts[optKey] || 0) + 1;
                 if(opt.isReset) return initGame();
-                if(opt.effects) applyEffects(opt.effects);
-                processItems(opt.getItem, opt.removeItem);
+                if(opt.effects) Object.keys(opt.effects).forEach(k => state.stats[k] = Math.max(0, (state.stats[k] || 0) + opt.effects[k]));
+                if(opt.getItem) opt.getItem.split(',').forEach(i => i.trim() && state.inventory.add(i.trim()));
+                if(opt.removeItem) opt.removeItem.split(',').forEach(i => i.trim() && state.inventory.delete(i.trim()));
 
                 if(opt.results?.length > 0) {
                     let roll = Math.random()*100, acc = 0, res = opt.results[opt.results.length-1];
                     for(let r of opt.results) { acc += r.chance; if(roll <= acc) { res = r; break; } }
-                    if(res.effects) applyEffects(res.effects);
-                    processItems(res.getItem, res.removeItem);
                     showMsg(res.message, res.next || opt.next || nodeId);
                 } else { renderNode(opt.next || nodeId); }
-                updateUI(); 
+                updateUI();
             };
             box.appendChild(btn);
         });
     }
 
-    function applyEffects(eff) { Object.keys(eff).forEach(k => { state.stats[k] = Math.max(0, (state.stats[k] || 0) + (Number(eff[k]) || 0)); }); }
     function updateUI() {
-        document.getElementById('status-bar').innerHTML = scenario.config.stats.map(s => `${s.label}: ${state.stats[s.key] || 0}`).join(' | ');
+        document.getElementById('status-bar').innerHTML = scenario.config.stats.map(s => `<span>${s.label}: ${state.stats[s.key] || 0}</span>`).join(' | ');
         document.getElementById('inventory-bar').innerText = "🎒 소지품: " + (state.inventory.size ? Array.from(state.inventory).join(', ') : "없음");
     }
-    function showMsg(text, next = null) {
-        document.getElementById('msg-content').innerText = text;
-        document.getElementById('msg-box').style.display = 'block';
-        state.nextNode = next;
-    }
+    function showMsg(t, n) { document.getElementById('msg-content').innerText = t; document.getElementById('msg-box').style.display = 'block'; state.nextNode = n; }
     function closeMsg() { document.getElementById('msg-box').style.display = 'none'; if(state.nextNode) renderNode(state.nextNode); }
 </script>
 </body>
