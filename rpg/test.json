@@ -1,64 +1,73 @@
 {
   "config": {
-    "title": "프로젝트 레비아탄: 디렉터스 컷",
-    "startNode": "room_start",
-    "themeColor": "#e67e22",
+    "title": "코드 레드: 오로라 기지",
+    "startNode": "entry_gate",
+    "themeColor": "#00d2ff",
+    "subColor": "#ff9f43",
     "stats": [
-      { "key": "hp", "label": "❤️ 체력", "initial": 20 },
-      { "key": "oxy", "label": "💨 산소", "initial": 30 },
-      { "key": "power", "label": "⚡ 전력", "initial": 10 }
+      { "key": "hull", "label": "🛡️ 선체 무결성", "initial": 100 },
+      { "key": "energy", "label": "⚡ 보조 전력", "initial": 15 },
+      { "key": "intel", "label": "💾 데이터 복구", "initial": 0 }
     ]
   },
   "scenes": {
-    "room_start": {
-      "text": "[개인 침실]\n기지가 침수되고 있습니다. 산소 공급 장치가 가동을 멈췄습니다.\n방 안에는 긴급 보급 상자와 손상된 태블릿이 있습니다.",
+    "entry_gate": {
+      "text": "[오로라 기지 외곽 정문]\n기지는 침묵에 잠겨 있습니다. 외부 패널을 조작해 내부로 진입해야 합니다.\n산소 농도가 급격히 낮아지고 있습니다.",
       "autoEvents": [
-        { "statKey": "oxy", "threshold": 1, "next": "death_oxy", "message": "숨이 막혀 의식을 잃었습니다..." }
+        { "statKey": "hull", "threshold": 1, "next": "death_hull", "message": "기지의 압력을 견디지 못하고 구조물이 붕괴했습니다." }
       ],
       "options": [
-        { "text": "보급 상자를 뒤진다 (최대 1회)", "maxClicks": 1, "results": [
-          { "chance": 100, "message": "산소캔과 손전등을 찾았습니다!", "getItem": "산소캔", "effects": { "oxy": 10 } }
+        { "text": "패널 해킹 시도 (전력 5 소모)", "effects": { "energy": -5 }, "results": [
+          { "chance": 40, "message": "해킹 성공! 보안 카드를 획득했습니다.", "getItem": "보안카드", "next": "hallway_main" },
+          { "chance": 60, "message": "해킹 실패. 역전류가 흘러 전력만 낭비했습니다.", "next": "entry_gate" }
         ]},
-        { "text": "태블릿의 로그를 읽는다 (정신 집중)", "effects": { "oxy": -5 }, "next": "room_start", "message": "기지의 폐쇄 프로토콜에 대한 정보를 얻었습니다." },
-        { "text": "복도로 나간다", "next": "hallway", "effects": { "oxy": -5 } }
-      ]
-    },
-    "hallway": {
-      "text": "[메인 복도]\n어둠이 깔린 복도입니다. 전력이 부족해 전등이 깜빡입니다.\n엔진실로 가서 전력을 복구해야 다른 구역으로 이동할 수 있을 것 같습니다.",
-      "options": [
-        { "text": "산소캔을 사용한다 (산소 +20)", "requireItem": "산소캔", "removeItem": "산소캔", "effects": { "oxy": 20 }, "next": "hallway" },
-        { "text": "엔진실(Engine Room)로 이동", "next": "engine_room", "effects": { "oxy": -5 } },
-        { "text": "중앙 창고로 이동 (전력 15 필요)", "next": "storage", "effects": { "power": -15, "oxy": -5 } }
-      ]
-    },
-    "engine_room": {
-      "text": "[엔진실]\n메인 발전기가 멈춰 있습니다. 수리하려면 도구가 필요해 보입니다.\n주변에 '낡은 렌치'가 굴러다닙니다.",
-      "options": [
-        { "text": "낡은 렌치를 줍는다", "getItem": "렌치", "maxClicks": 1, "next": "engine_room" },
-        { "text": "발전기를 수리한다 (렌치 필요)", "requireItem": "렌치", "results": [
-          { "chance": 70, "message": "발전기가 가동됩니다! 전력이 충전됩니다.", "effects": { "power": 50 } },
-          { "chance": 30, "message": "수리 도중 스파크가 튀어 다쳤습니다.", "effects": { "hp": -10, "power": 10 } }
-        ], "next": "engine_room" },
-        { "text": "복도로 돌아간다", "next": "hallway" }
-      ]
-    },
-    "storage": {
-      "text": "[중앙 창고]\n밝은 조명이 켜진 창고입니다. 이곳에는 탈출용 잠수정이 있습니다.\n하지만 잠수정 입구가 단단히 잠겨 있습니다.",
-      "options": [
-        { "text": "잠수정을 억지로 연다 (체력 소모)", "effects": { "hp": -10, "oxy": -5 }, "results": [
-          { "chance": 40, "message": "성공! 잠수정 내부로 진입합니다.", "next": "ending_win" },
-          { "chance": 60, "message": "문은 꿈쩍도 하지 않고 몸만 상했습니다.", "next": "storage" }
+        { "text": "잔해 속 보급품 뒤지기 (최대 2회)", "maxClicks": 2, "results": [
+          { "chance": 50, "message": "소형 배터리를 찾아 전력을 충전합니다.", "effects": { "energy": 10 } },
+          { "chance": 50, "message": "쓸만한 것이 없습니다." }
         ]},
-        { "text": "복도로 돌아간다", "next": "hallway" }
+        { "text": "강제로 문을 열기 (선체 손상 위험)", "effects": { "hull": -20 }, "next": "hallway_main" }
       ]
     },
-    "ending_win": {
-      "text": "잠수정의 엔진이 부드럽게 돌아가며 심해 기지를 탈출합니다.\n햇살이 비치는 수면이 보이기 시작합니다.\n[HAPPY ENDING: 심해의 탈출자]",
-      "options": [{ "text": "처음부터 다시", "isReset": true, "next": "room_start" }]
+    "hallway_main": {
+      "text": "[중앙 통로]\n전력이 복구되지 않아 붉은색 비상등만 깜빡입니다.\n서빙 로봇 하나가 망가진 채 방치되어 있습니다.",
+      "options": [
+        { "text": "로봇을 수리해 정보를 얻는다 (데이터 +10)", "effects": { "energy": -10, "intel": 10 }, "maxClicks": 1 },
+        { "text": "데이터 서버실로 이동 (보안카드 필요)", "requireItem": "보안카드", "next": "server_room" },
+        { "text": "원자로실로 강제 이동 (전력 10 소모)", "effects": { "energy": -10 }, "next": "reactor_core" }
+      ]
     },
-    "death_oxy": {
-      "text": "산소가 고갈되어 차가운 바닥에 쓰러졌습니다.\n[GAME OVER]",
-      "options": [{ "text": "재도전", "isReset": true, "next": "room_start" }]
+    "server_room": {
+      "text": "[데이터 서버실]\n이곳의 단말기에는 기지의 폭발 원인이 기록되어 있습니다.\n데이터를 최대한 많이 확보해야 진상을 규명할 수 있습니다.",
+      "options": [
+        { "text": "데이터 다운로드 (전력 5 소모)", "effects": { "energy": -5, "intel": 20 }, "maxClicks": 3 },
+        { "text": "서버실 부품 추출 (선체 보수용)", "getItem": "나노수리킷", "maxClicks": 1 },
+        { "text": "중앙 통로로 복귀", "next": "hallway_main" }
+      ]
+    },
+    "reactor_core": {
+      "text": "[원자로 핵심부]\n원자로가 폭주 직전입니다. 선체 무결성이 급격히 떨어지고 있습니다.",
+      "autoEvents": [
+        { "statKey": "hull", "threshold": 30, "next": "death_hull", "message": "원자로 폭발의 여파로 기지가 산산조각 났습니다." }
+      ],
+      "options": [
+        { "text": "나노수리킷으로 선체 보강 (+40)", "requireItem": "나노수리킷", "removeItem": "나노수리킷", "effects": { "hull": 40 } },
+        { "text": "원자로 강제 정지 (데이터 50 필요)", "effects": { "intel": -50 }, "results": [
+          { "chance": 100, "message": "원자로를 성공적으로 진정시켰습니다!", "next": "ending_good" }
+        ]},
+        { "text": "탈출 포드로 도주", "next": "ending_escape" }
+      ]
+    },
+    "ending_good": {
+      "text": "당신은 기지의 폭발을 막고 모든 데이터를 확보했습니다.\n연맹의 구조선이 다가오는 것이 보입니다.\n[TRUE ENDING: 오로라의 구원자]",
+      "options": [{ "text": "새로운 임무 시작", "isReset": true, "next": "entry_gate" }]
+    },
+    "ending_escape": {
+      "text": "기지를 뒤로하고 탈출 포드에 몸을 실었습니다.\n진실은 어둠 속에 묻혔지만, 당신은 살아남았습니다.\n[NORMAL ENDING: 비겁한 생존자]",
+      "options": [{ "text": "다시 도전", "isReset": true, "next": "entry_gate" }]
+    },
+    "death_hull": {
+      "text": "경고: 선체 무결성 제로. 산소 공급 중단.\n당신의 여정은 여기서 끝납니다.\n[GAME OVER]",
+      "options": [{ "text": "마지막 체크포인트", "isReset": true, "next": "entry_gate" }]
     }
   }
 }
