@@ -2,28 +2,21 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title id="p-title-tab">Adventure Player v5.4</title>
+    <title>Adventure Player v6.1.2</title>
     <link rel="stylesheet" href="common.css">
 </head>
 <body>
-    <div id="load-screen" class="container">
-        <h1 id="p-display-title" class="theme-text">🎮 Adventure Player</h1>
-        <p>시나리오 JSON 파일을 선택하여 시작하세요.</p>
-        <input type="file" id="loader" accept=".json">
+    <div id="load-screen" class="container" style="justify-content: center; align-items: center;">
+        <h1 style="color:var(--point)">🎮 ENGINE v6.1.2</h1>
+        <input type="file" id="loader" accept=".json" style="padding:20px; border:2px dashed var(--border); width:auto;">
     </div>
-
     <div id="game-ui" class="container" style="display:none">
         <div id="status-bar"></div>
-        <div id="inventory-bar">🎒 소지품: 없음</div>
-        <div id="scene-text"></div>
+        <div id="inventory-bar"></div>
+        <div id="scene-scroll"><div id="scene-text"></div></div>
         <div id="options-box"></div>
     </div>
-
-    <div id="msg-box">
-        <h2 id="msg-title">알림</h2>
-        <div id="msg-content"></div>
-        <button id="msg-close-btn" onclick="closeMsg()">확인</button>
-    </div>
+    <div id="msg-box"><h2>알림</h2><div id="msg-content"></div><button onclick="closeMsg()">확인</button></div>
 
 <script>
     let scenario, state = { stats: {}, inventory: new Set(), clickCounts: {}, nextNode: null };
@@ -32,105 +25,90 @@
         const reader = new FileReader();
         reader.onload = (ev) => {
             scenario = JSON.parse(ev.target.result);
-            applyConfig();
+            if(scenario.config.themeColor) document.documentElement.style.setProperty('--point', scenario.config.themeColor);
+            if(scenario.config.subColor) document.documentElement.style.setProperty('--sub', scenario.config.subColor);
             document.getElementById('load-screen').style.display = 'none';
-            document.getElementById('game-ui').style.display = 'block';
+            document.getElementById('game-ui').style.display = 'flex';
             initGame();
         };
         reader.readAsText(e.target.files[0]);
     };
 
-    function applyConfig() {
-        if(!scenario.config) return;
-        document.title = scenario.config.title;
-        document.getElementById('p-display-title').innerText = scenario.config.title;
-        if(scenario.config.themeColor) document.documentElement.style.setProperty('--point', scenario.config.themeColor);
-        if(scenario.config.subColor) document.documentElement.style.setProperty('--sub', scenario.config.subColor);
-    }
-
     function initGame() {
         state.inventory = new Set(); state.clickCounts = {};
-        scenario.config.stats.forEach(s => state.stats[s.key] = s.initial);
+        scenario.config.stats.forEach(s => state.stats[s.key] = Number(s.initial));
         renderNode(scenario.config.startNode);
     }
+
+    const processItems = (getStr, removeStr) => {
+        if(getStr) getStr.split(',').forEach(i => { const t = i.trim(); if(t) state.inventory.add(t); });
+        if(removeStr) removeStr.split(',').forEach(i => { const t = i.trim(); if(t) state.inventory.delete(t); });
+    };
 
     function renderNode(nodeId) {
         const node = scenario.scenes[nodeId];
         if(!node) return;
-
-        // 자동 이벤트 체크 (사망 등)
+        
         if(node.autoEvents) {
             for(let ev of node.autoEvents) {
-                if(state.stats[ev.statKey] < ev.threshold) return showMsg(ev.message, ev.next);
+                if((state.stats[ev.statKey] || 0) < (ev.threshold || 0)) return showMsg(ev.message, ev.next || nodeId);
             }
         }
 
         updateUI();
         document.getElementById('scene-text').innerText = node.text;
-        const box = document.getElementById('options-box'); 
-        box.innerHTML = '';
-        
+        const box = document.getElementById('options-box'); box.innerHTML = '';
+
         node.options.forEach((opt, idx) => {
             const optKey = `${nodeId}_${idx}`;
-            if(opt.requireItem && !state.inventory.has(opt.requireItem)) return;
             if(opt.maxClicks && (state.clickCounts[optKey] || 0) >= opt.maxClicks) return;
 
             const btn = document.createElement('button');
-            btn.className = 'game-btn';
-            btn.innerText = opt.text;
+            btn.className = 'game-btn'; btn.innerText = opt.text;
 
-            // 스탯 부족 시 비활성화 (결과가 0 미만이 되는지 체크)
-            let canAfford = true;
-            if(opt.effects) {
-                Object.keys(opt.effects).forEach(k => {
-                    if((state.stats[k] || 0) + opt.effects[k] < 0) canAfford = false;
+            let canAfford = true, missingItems = [];
+            if(opt.effects) Object.keys(opt.effects).forEach(k => { if((state.stats[k] || 0) + opt.effects[k] < 0) canAfford = false; });
+            if(opt.requireItem) {
+                opt.requireItem.split(',').forEach(item => {
+                    const t = item.trim(); if(t && !state.inventory.has(t)) { canAfford = false; missingItems.push(t); }
                 });
             }
-            if(!canAfford) { btn.disabled = true; btn.innerText += " (수량 부족)"; }
+
+            if(!canAfford) {
+                btn.disabled = true;
+                btn.innerText += missingItems.length > 0 ? ` [필요: ${missingItems.join(', ')}]` : " [조건 부족]";
+            }
 
             btn.onclick = () => {
                 state.clickCounts[optKey] = (state.clickCounts[optKey] || 0) + 1;
                 if(opt.isReset) return initGame();
                 if(opt.effects) applyEffects(opt.effects);
-                if(opt.getItem) state.inventory.add(opt.getItem);
-                if(opt.removeItem) state.inventory.delete(opt.removeItem);
-                
-                if(opt.results && opt.results.length > 0) {
-                    let roll = Math.random()*100, acc = 0, res = opt.results[0];
+                processItems(opt.getItem, opt.removeItem);
+
+                if(opt.results?.length > 0) {
+                    let roll = Math.random()*100, acc = 0, res = opt.results[opt.results.length-1];
                     for(let r of opt.results) { acc += r.chance; if(roll <= acc) { res = r; break; } }
                     if(res.effects) applyEffects(res.effects);
-                    if(res.getItem) state.inventory.add(res.getItem);
+                    processItems(res.getItem, res.removeItem);
                     showMsg(res.message, res.next || opt.next || nodeId);
-                } else { 
-                    renderNode(opt.next || nodeId); 
-                }
+                } else { renderNode(opt.next || nodeId); }
+                updateUI(); 
             };
             box.appendChild(btn);
         });
     }
 
-    function applyEffects(eff) {
-        Object.keys(eff).forEach(k => { 
-            state.stats[k] = Math.max(0, (state.stats[k] || 0) + eff[k]); 
-        });
-        updateUI();
-    }
-
+    function applyEffects(eff) { Object.keys(eff).forEach(k => { state.stats[k] = Math.max(0, (state.stats[k] || 0) + (Number(eff[k]) || 0)); }); }
     function updateUI() {
-        document.getElementById('status-bar').innerHTML = scenario.config.stats.map(s => `${s.label}: ${state.stats[s.key]}`).join(' | ');
+        document.getElementById('status-bar').innerHTML = scenario.config.stats.map(s => `${s.label}: ${state.stats[s.key] || 0}`).join(' | ');
         document.getElementById('inventory-bar').innerText = "🎒 소지품: " + (state.inventory.size ? Array.from(state.inventory).join(', ') : "없음");
     }
-
     function showMsg(text, next = null) {
         document.getElementById('msg-content').innerText = text;
         document.getElementById('msg-box').style.display = 'block';
         state.nextNode = next;
     }
-
-    function closeMsg() {
-        document.getElementById('msg-box').style.display = 'none';
-        if(state.nextNode) renderNode(state.nextNode);
-    }
+    function closeMsg() { document.getElementById('msg-box').style.display = 'none'; if(state.nextNode) renderNode(state.nextNode); }
 </script>
 </body>
 </html>
