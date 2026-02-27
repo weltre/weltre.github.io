@@ -1,46 +1,46 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head><meta charset="UTF-8"><title>Maker v6.2.1</title><link rel="stylesheet" href="common.css"></head>
+<head><meta charset="UTF-8"><title>Maker v6.2.3</title><link rel="stylesheet" href="common.css"></head>
 <body style="display:flex; flex-direction:column; height:100vh;">
     <div style="background:#1a1d23; padding:15px; display:flex; justify-content:space-between; border-bottom:1px solid #333;">
-        <strong style="color:var(--point)">ENGINE MAKER v6.2.1</strong>
+        <strong style="color:var(--point)">ENGINE MAKER v6.2.3</strong>
         <div>
             <button class="btn btn-orange" onclick="document.getElementById('f-in').click()">📂 로드</button>
             <button class="btn btn-blue" onclick="save()">💾 저장</button>
             <input type="file" id="f-in" style="display:none" onchange="load(event)">
         </div>
     </div>
-    <main style="display:flex; flex:1; overflow:hidden;">
+    <div style="display:flex; flex:1; overflow:hidden;">
         <div id="side" style="width:280px; border-right:1px solid #333; overflow-y:auto; background:#15181c;">
-            <div style="padding:15px;"><button class="btn btn-blue" style="width:100%" onclick="addNode()">+ 새 장면 추가</button></div>
+            <div style="padding:15px;"><button class="btn btn-blue" style="width:100%" onclick="addNode()">+ 장면 추가</button></div>
             <div id="node-list"></div>
         </div>
         <div id="edit" style="flex:1; padding:25px; overflow-y:auto;">
             <div class="opt-edit-card" style="margin-top:0;">
-                <label style="color:var(--point); font-weight:bold;">시나리오 전역 설정</label>
-                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:10px;">
+                <label style="color:var(--point); font-weight:bold;">시나리오 설정</label>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
                     <input type="text" id="cfg-title" placeholder="게임 제목" oninput="sc.config.title=this.value">
-                    <div style="display:flex; align-items:center; gap:5px;"><label>메인</label><input type="color" oninput="updCol('themeColor', this.value)"></div>
-                    <div style="display:flex; align-items:center; gap:5px;"><label>서브</label><input type="color" oninput="updCol('subColor', this.value)"></div>
+                    <div style="display:flex; align-items:center; gap:5px;"><label>메인</label><input type="color" oninput="updColor('themeColor', this.value)"></div>
+                    <div style="display:flex; align-items:center; gap:5px;"><label>서브</label><input type="color" oninput="updColor('subColor', this.value)"></div>
                 </div>
                 <button class="btn btn-blue" style="width:100%; margin-top:10px;" onclick="addStat()">+ 스탯 추가</button>
                 <div id="stat-list"></div>
             </div>
             <div id="node-editor" style="display:none">
-                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin:15px 0;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; margin:15px 0;">
                     <input type="text" id="ed-id" onblur="rename()">
                     <button class="btn btn-orange" onclick="addAuto()">+ 자동이벤트</button>
                     <button class="btn btn-blue" onclick="addOpt()">+ 선택지 추가</button>
                 </div>
-                <textarea id="ed-text" rows="5" oninput="sc.scenes[cur].text=this.value" placeholder="장면 내용 입력"></textarea>
+                <textarea id="ed-text" rows="5" oninput="sc.scenes[cur].text=this.value"></textarea>
                 <div id="auto-list"></div><div id="opt-list"></div>
             </div>
         </div>
-    </main>
+    </div>
 <script>
     let sc = { config: { title: "New Game", startNode: "start", themeColor: "#00d2ff", subColor: "#ff9f43", stats: [{key:"hp", label:"HP", initial:10}] }, scenes: { "start": { text: "시작", options: [] } } };
     let cur = "start";
-    function updCol(k, v) { sc.config[k]=v; document.documentElement.style.setProperty(k==='themeColor'?'--point':'--sub', v); }
+    function updColor(k,v) { sc.config[k]=v; document.documentElement.style.setProperty(k==='themeColor'?'--point':'--sub', v); }
     function addStat() { sc.config.stats.push({key:"s"+Date.now(), label:"스탯", initial:0}); stats(); }
     function stats() {
         const l = document.getElementById('stat-list'); l.innerHTML = '';
@@ -64,7 +64,7 @@
         });
     }
     function loadNode(id) { cur = id; document.getElementById('node-editor').style.display = 'block'; document.getElementById('ed-id').value = id; document.getElementById('ed-text').value = sc.scenes[id].text; list(); opts(); autos(); }
-    function addOpt() { sc.scenes[cur].options.push({text:"선택지", next:cur, effects:{}}); opts(); }
+    function addOpt() { sc.scenes[cur].options.push({text:"선택지", next:cur}); opts(); }
     function opts() {
         const l = document.getElementById('opt-list'); l.innerHTML = '';
         sc.scenes[cur].options.forEach((o, i) => {
@@ -72,25 +72,23 @@
             d.innerHTML = `<input type="text" value="${o.text}" oninput="sc.scenes['${cur}'].options[${i}].text=this.value">
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px;">
                     <input type="text" placeholder="다음장면" value="${o.next||''}" oninput="sc.scenes['${cur}'].options[${i}].next=this.value">
-                    <input type="text" placeholder="필요템(쉼표구분)" value="${o.requireItem||''}" oninput="sc.scenes['${cur}'].options[${i}].requireItem=this.value">
-                    <input type="text" placeholder="획득템(쉼표구분)" value="${o.getItem||''}" oninput="sc.scenes['${cur}'].options[${i}].getItem=this.value">
-                    <input type="text" placeholder="소모템(쉼표구분)" value="${o.removeItem||''}" oninput="sc.scenes['${cur}'].options[${i}].removeItem=this.value">
+                    <input type="text" placeholder="필요템" value="${o.requireItem||''}" oninput="sc.scenes['${cur}'].options[${i}].requireItem=this.value">
+                    <input type="text" placeholder="획득템" value="${o.getItem||''}" oninput="sc.scenes['${cur}'].options[${i}].getItem=this.value">
+                    <input type="text" placeholder="소모템" value="${o.removeItem||''}" oninput="sc.scenes['${cur}'].options[${i}].removeItem=this.value">
                 </div>
-                <button class="btn btn-orange" style="width:100%; margin-top:5px;" onclick="addRes(${i})">+ 확률 결과 추가</button>
+                <button class="btn btn-orange" style="width:100%; margin-top:5px;" onclick="addRes(${i})">+ 확률 결과</button>
                 <div id="res-${i}"></div>
-                <button class="btn btn-red" style="width:100%; margin-top:10px;" onclick="sc.scenes['${cur}'].options.splice(${i},1); opts();">이 선택지 삭제</button>`;
+                <button class="btn btn-red" style="width:100%; margin-top:5px;" onclick="sc.scenes['${cur}'].options.splice(${i},1); opts();">삭제</button>`;
             l.appendChild(d);
             o.results?.forEach((r, ri) => {
                 const rd = document.createElement('div'); rd.className = "res-edit-card";
-                rd.innerHTML = `<div style="display:flex; gap:5px;"><input type="number" value="${r.chance}" oninput="sc.scenes['${cur}'].options[${i}].results[${ri}].chance=Number(this.value)">%
-                                <input type="text" placeholder="결과 이동" value="${r.next||''}" oninput="sc.scenes['${cur}'].options[${i}].results[${ri}].next=this.value"></div>
-                                <textarea oninput="sc.scenes['${cur}'].options[${i}].results[${ri}].message=this.value" placeholder="결과 메시지">${r.message}</textarea>`;
+                rd.innerHTML = `<input type="number" value="${r.chance}" oninput="sc.scenes['${cur}'].options[${i}].results[${ri}].chance=Number(this.value)">
+                                <input type="text" placeholder="결과 이동" value="${r.next||''}" oninput="sc.scenes['${cur}'].options[${i}].results[${ri}].next=this.value">
+                                <textarea oninput="sc.scenes['${cur}'].options[${i}].results[${ri}].message=this.value">${r.message}</textarea>`;
                 d.querySelector(`#res-${i}`).appendChild(rd);
             });
         });
     }
-    function addRes(i) { if(!sc.scenes[cur].options[i].results) sc.scenes[cur].options[i].results = [];
-        sc.scenes[cur].options[i].results.push({chance:50, message:"결과", next:""}); opts(); }
     function addAuto() { if(!sc.scenes[cur].autoEvents) sc.scenes[cur].autoEvents = [];
         sc.scenes[cur].autoEvents.push({statKey:sc.config.stats[0].key, threshold:1, next:"", message:"이벤트"}); autos(); }
     function autos() {
@@ -98,15 +96,15 @@
         sc.scenes[cur].autoEvents?.forEach((e, i) => {
             const d = document.createElement('div'); d.className = "res-edit-card"; d.style.borderColor="var(--sub)";
             d.innerHTML = `<select onchange="sc.scenes['${cur}'].autoEvents[${i}].statKey=this.value">${sc.config.stats.map(s=>`<option value="${s.key}" ${s.key===e.statKey?'selected':''}>${s.label}</option>`).join('')}</select>
-                           <input type="number" value="${e.threshold}" oninput="sc.scenes['${cur}'].autoEvents[${i}].threshold=Number(this.value)">미만 시
+                           <input type="number" value="${e.threshold}" oninput="sc.scenes['${cur}'].autoEvents[${i}].threshold=Number(this.value)">
                            <input type="text" placeholder="이동ID" value="${e.next}" oninput="sc.scenes['${cur}'].autoEvents[${i}].next=this.value">
                            <textarea oninput="sc.scenes['${cur}'].autoEvents[${i}].message=this.value">${e.message}</textarea>
-                           <button class="btn btn-red" style="width:100%" onclick="sc.scenes['${cur}'].autoEvents.splice(${i},1); autos();">자동이벤트 삭제</button>`;
+                           <button class="btn btn-red" onclick="sc.scenes['${cur}'].autoEvents.splice(${i},1); autos();">X</button>`;
             l.appendChild(d);
         });
     }
     function rename() { const n = document.getElementById('ed-id').value; if(n&&n!==cur){ sc.scenes[n]=sc.scenes[cur]; delete sc.scenes[cur]; cur=n; list(); } }
-    function save() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(sc, null, 2)])); a.download="scenario.json"; a.click(); }
+    function save() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(sc, null, 2)])); a.download="game.json"; a.click(); }
     function load(e) { const r = new FileReader(); r.onload = ev => { sc = JSON.parse(ev.target.result); stats(); list(); loadNode(Object.keys(sc.scenes)[0]); }; r.readAsText(e.target.files[0]); }
     stats(); list(); loadNode("start");
 </script></body></html>
