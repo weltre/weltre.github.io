@@ -1,175 +1,299 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8" />
-<title>스토리 엔진 Maker / Player</title>
-<style>
-:root {
-  --main:#00d2ff; --sub:#ff4757;
-}
-body { margin:0; font-family:system-ui; background:#111; color:#eee; }
-header { padding:10px; background:#000; display:flex; gap:10px; align-items:center; }
-button { padding:6px 12px; border:0; border-radius:4px; cursor:pointer; }
-.primary { background:var(--main); color:#000; }
-.danger { background:var(--sub); color:#fff; }
-input, textarea { width:100%; background:#222; color:#fff; border:1px solid #444; border-radius:4px; padding:4px; }
-.card { border:1px solid #333; border-radius:6px; padding:8px; margin-bottom:8px; background:#1a1a1a; }
-.card h3 { margin:4px 0; }
-.flex { display:flex; gap:6px; flex-wrap:wrap; }
-#maker, #player { padding:10px; }
-.hidden { display:none; }
-.hud { display:flex; gap:10px; background:#000; padding:6px; }
-.hud span { padding:4px 8px; background:#222; border-radius:4px; }
-.option-btn { display:block; width:100%; margin:4px 0; }
-.disabled { opacity:.4; pointer-events:none; }
-</style>
+    <meta charset="UTF-8">
+    <title>TEXT ENGINE v8.6 [ENHANCED]</title>
+    <style>
+        :root { --bg: #0f1115; --card: #1a1d23; --text: #e0e0e0; --point: #00d2ff; --sub: #ff4757; --border: #333; }
+        * { box-sizing: border-box; font-family: 'Pretendard', sans-serif; }
+        body { margin: 0; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        
+        nav { background: #15181c; border-bottom: 1px solid var(--border); display: flex; padding: 10px 20px; gap: 10px; align-items: center; }
+        .nav-btn { padding: 8px 16px; border: none; background: none; color: #888; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .nav-btn.active { color: var(--point); border-bottom: 2px solid var(--point); }
+        .btn { padding: 8px 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 13px; }
+        .btn-blue { background: var(--point); color: #000; }
+        .btn-orange { background: #ff9f43; color: #000; }
+
+        .container { flex: 1; display: flex; overflow: hidden; }
+        #view-player, #view-maker { flex: 1; display: none; overflow: hidden; }
+        
+        /* Player Mode */
+        #view-player { flex-direction: column; padding: 30px; max-width: 900px; margin: 0 auto; width: 100%; }
+        .stat-bar { background: var(--card); border: 1px solid var(--border); padding: 15px; border-radius: 10px; margin-bottom: 15px; display: flex; gap: 20px; color: var(--point); font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        #scene-box { 
+            flex: 1; overflow-y: auto; background: var(--card); border: 1px solid var(--border); 
+            padding: 25px; border-radius: 10px; margin-bottom: 20px; 
+            font-size: 1.25rem; line-height: 1.8; white-space: pre-wrap;
+            cursor: pointer; position: relative; transition: border 0.3s;
+        }
+        #scene-box:hover { border-color: var(--point); }
+        #scene-box::after { content: "Click to Skip"; position: absolute; bottom: 10px; right: 20px; font-size: 0.7rem; color: var(--point); opacity: 0.4; }
+        
+        .choice-area { display: flex; flex-direction: column; gap: 10px; min-height: 150px; }
+        .choice-btn { 
+            width: 100%; padding: 18px; background: #1e2228; border: 1px solid var(--border); 
+            border-left: 5px solid var(--point); color: #fff; border-radius: 8px; 
+            cursor: pointer; text-align: left; transition: 0.3s;
+            animation: fadeIn 0.5s ease forwards; opacity: 0;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .choice-btn:hover { background: #252a33; transform: translateX(8px); border-color: var(--point); }
+
+        /* Maker Mode */
+        #side-list { width: 250px; background: #15181c; border-right: 1px solid var(--border); padding: 15px; overflow-y: auto; }
+        #editor-area { flex: 1; padding: 25px; overflow-y: auto; background: #0c0e12; }
+        .card { background: var(--card); border: 1px solid var(--border); padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        .node-card { padding: 12px; background: var(--card); border: 1px solid var(--border); margin-bottom: 8px; border-radius: 5px; cursor: pointer; font-size: 0.9rem; }
+        .node-card.active { border-color: var(--point); background: #252a33; }
+        input, textarea, select { width: 100%; background: #000; color: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 10px; margin-top: 5px; font-size: 0.9rem; }
+        
+        .opt-item { background: #252a33; padding: 10px; border-radius: 5px; margin-top: 10px; border: 1px dashed #555; }
+
+        #modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(5px); }
+        #modal-box { background: var(--card); border: 2px solid var(--sub); padding: 30px; border-radius: 15px; width: 400px; text-align: center; box-shadow: 0 0 30px rgba(255, 71, 87, 0.2); }
+    </style>
 </head>
 <body>
 
-<header>
-  <strong>스토리 엔진</strong>
-  <input type="file" id="loadJson" />
-  <button class="primary" id="playBtn" disabled>▶ 플레이</button>
-  <button class="danger" id="backMaker" class="hidden">Maker로</button>
-</header>
+<nav>
+    <div style="font-weight:bold; color:var(--point); font-size:1.2rem; letter-spacing:1px;">ENGINE v8.6</div>
+    <button id="nav-player" class="nav-btn active" onclick="tab('player')">PLAY</button>
+    <button id="nav-maker" class="nav-btn" onclick="tab('maker')">MAKER</button>
+    <div style="flex:1"></div>
+    <button class="btn btn-orange" onclick="exportData()">💾 SAVE JSON</button>
+</nav>
 
-<div id="maker"></div>
-<div id="player" class="hidden"></div>
+<div class="container">
+    <div id="view-player">
+        <div class="stat-bar" id="p-stats"></div>
+        <div id="scene-box" onclick="skipTypewriter()"></div>
+        <div id="choice-area" class="choice-area"></div>
+    </div>
+
+    <div id="view-maker">
+        <div id="side-list">
+            <button class="btn btn-blue" style="width:100%; margin-bottom:15px;" onclick="addNode()">+ NEW NODE</button>
+            <div id="node-list"></div>
+        </div>
+        <div id="editor-area">
+            <div class="card">
+                <b>[SYSTEM CONFIG]</b>
+                <input id="cfg-title" placeholder="Game Title" oninput="sc.config.title=this.value">
+            </div>
+            <div id="node-editor" style="display:none">
+                <div class="card">
+                    <label>Node ID (Unique Name)</label><input id="ed-id" onblur="renameNode(this.value)">
+                    <label style="display:block; margin-top:15px;">Scene Text</label>
+                    <textarea id="ed-text" rows="6" oninput="updText(this.value)"></textarea>
+                </div>
+                <div class="card">
+                    <b>[OPTIONS]</b>
+                    <div id="opt-list"></div>
+                    <button class="btn btn-blue" style="margin-top:10px; width:100%;" onclick="addOpt()">+ ADD NEW OPTION</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="modal">
+    <div id="modal-box">
+        <div id="modal-text" style="font-size: 1.1rem; line-height: 1.6;"></div><br>
+        <button class="btn btn-blue" style="width:100%; padding: 12px;" onclick="closeModal()">계속하기</button>
+    </div>
+</div>
 
 <script>
-let data=null, errors=[];
-let state={};
-
-document.getElementById('loadJson').onchange=e=>{
-  const f=e.target.files[0];
-  const r=new FileReader();
-  r.onload=()=>{
-    try{
-      data=JSON.parse(r.result);
-      validate();
-      renderMaker();
-    }catch(err){ alert("JSON 오류"); }
-  };
-  r.readAsText(f);
-};
-
-function validate(){
-  errors=[];
-  if(!data.config?.startNode || !data.scenes[data.config.startNode])
-    errors.push("startNode 오류");
-  data.config.stats.forEach(s=>{
-    if(!s.key) errors.push("스탯 key 누락");
-  });
-  document.getElementById('playBtn').disabled=errors.length>0;
-}
-
-function renderMaker(){
-  const m=document.getElementById('maker');
-  m.innerHTML="";
-  const cfg=document.createElement('div');
-  cfg.className="card";
-  cfg.innerHTML=`<h3>전역 설정</h3>
-  <div>제목: ${data.config.title}</div>
-  <div>시작 노드: ${data.config.startNode}</div>`;
-  m.appendChild(cfg);
-
-  Object.entries(data.scenes).forEach(([id,sc])=>{
-    const c=document.createElement('div');
-    c.className="card";
-    c.innerHTML=`<h3>Scene: ${id}</h3><div>${sc.text}</div>`;
-    m.appendChild(c);
-  });
-}
-
-document.getElementById('playBtn').onclick=()=>{
-  initPlayer();
-  document.getElementById('maker').classList.add('hidden');
-  document.getElementById('player').classList.remove('hidden');
-};
-
-document.getElementById('backMaker').onclick=()=>{
-  document.getElementById('player').classList.add('hidden');
-  document.getElementById('maker').classList.remove('hidden');
-};
-
-function initPlayer(){
-  state.stats={};
-  state.items=[];
-  data.config.stats.forEach(s=>state.stats[s.key]=s.initial);
-  go(data.config.startNode);
-}
-
-function go(id){
-  const p=document.getElementById('player');
-  p.innerHTML="";
-  const sc=data.scenes[id];
-
-  const hud=document.createElement('div');
-  hud.className="hud";
-  Object.entries(state.stats).forEach(([k,v])=>{
-    const sp=document.createElement('span');
-    sp.textContent=`${k}: ${v}`;
-    hud.appendChild(sp);
-  });
-  p.appendChild(hud);
-
-  const txt=document.createElement('div');
-  txt.className="card";
-  txt.textContent=sc.text;
-  p.appendChild(txt);
-
-  (sc.autoEvents||[]).forEach(a=>{
-    if(state.stats[a.statKey]<a.threshold){
-      alert(a.message);
-      go(a.next);
-      return;
+/* --- DATA STRUCTURE --- */
+let sc = {
+    config: { title: "새로운 모험", stats: [{key:"hp", label:"체력", initial:100}] },
+    scenes: {
+        "start": { text: "희미한 촛불만이 방 안을 밝히고 있습니다. 책상 위에는 낡은 일기장이 놓여 있습니다.", options: [{text:"일기장을 펼친다", next:"read"}, {text:"방을 나간다", next:"exit"}], autoEvents:[] },
+        "read": { text: "일기장에는 당신이 알지 못하는 사람의 이름이 적혀 있습니다. 소름이 돋습니다.", options: [{text:"다시 돌아간다", next:"start"}], autoEvents:[] },
+        "exit": { text: "방 문은 굳게 잠겨 있습니다. 아무래도 여기서 나갈 방법은 없는 것 같습니다.", options: [{text:"다시 돌아간다", next:"start"}], autoEvents:[] }
     }
-  });
+};
 
-  sc.options.forEach(op=>{
-    const b=document.createElement('button');
-    b.className="option-btn";
-    b.textContent=op.text;
-    if(op.requireItem && !state.items.includes(op.requireItem)){
-      b.classList.add('disabled');
-      b.title="아이템 필요";
-    }
-    b.onclick=()=>{
-      if(op.effects){
-        Object.entries(op.effects).forEach(([k,v])=>state.stats[k]+=v);
-      }
-      if(op.getItem){
-        op.getItem.split(',').forEach(i=>state.items.push(i.trim()));
-      }
-      if(op.consumeItem){
-        op.consumeItem.split(',').forEach(i=>{
-          const idx=state.items.indexOf(i.trim());
-          if(idx>-1) state.items.splice(idx,1);
-        });
-      }
-      if(op.results){
-        let r=Math.random()*100, acc=0;
-        for(const res of op.results){
-          acc+=res.chance;
-          if(r<=acc){
-            if(res.message) alert(res.message);
-            if(res.effects){
-              Object.entries(res.effects).forEach(([k,v])=>state.stats[k]+=v);
-            }
-            if(res.getItem){
-              res.getItem.split(',').forEach(i=>state.items.push(i.trim()));
-            }
-            go(res.next);
-            return;
-          }
+let state = { stats: {}, typingIdx: 0, currentFullText: "", isTyping: false, timer: null, nextScene: null, currentCallback: null };
+
+/* --- PLAYER LOGIC --- */
+function init() {
+    sc.config.stats.forEach(s => state.stats[s.key] = Number(s.initial));
+    render("start");
+}
+
+function render(id) {
+    const n = sc.scenes[id]; 
+    if(!n) return console.error("Node not found:", id);
+    
+    // Status Display
+    document.getElementById('p-stats').innerHTML = sc.config.stats.map(s => `<span>${s.label}: ${state.stats[s.key]}</span>`).join('');
+    
+    // Clear Choice Area
+    const area = document.getElementById('choice-area');
+    area.innerHTML = "";
+    
+    // Start Typing
+    startTypewriter(n.text, () => {
+        renderChoices(n.options, id);
+    });
+}
+
+function startTypewriter(text, callback) {
+    state.isTyping = true;
+    state.currentFullText = text;
+    state.typingIdx = 0;
+    state.currentCallback = callback;
+    
+    const box = document.getElementById('scene-box');
+    box.innerHTML = "";
+    
+    clearInterval(state.timer);
+    state.timer = setInterval(() => {
+        if(state.typingIdx < text.length) {
+            box.innerHTML += text.charAt(state.typingIdx);
+            state.typingIdx++;
+            box.scrollTop = box.scrollHeight; // Auto scroll
+        } else {
+            completeTypewriter();
         }
-      }
-      if(op.isReset){ initPlayer(); return; }
-      if(op.next) go(op.next);
-    };
-    p.appendChild(b);
-  });
+    }, 25);
 }
+
+function skipTypewriter() {
+    if(!state.isTyping) return;
+    completeTypewriter();
+}
+
+function completeTypewriter() {
+    clearInterval(state.timer);
+    state.isTyping = false;
+    document.getElementById('scene-box').innerText = state.currentFullText;
+    if(state.currentCallback) {
+        state.currentCallback();
+        state.currentCallback = null;
+    }
+}
+
+function renderChoices(opts, currentId) {
+    const area = document.getElementById('choice-area');
+    area.innerHTML = "";
+    if(!opts) return;
+
+    opts.forEach((o, index) => {
+        const b = document.createElement('button');
+        b.className = "choice-btn";
+        b.style.animationDelay = `${index * 0.1}s`; // Stagger effect
+        b.innerText = o.text;
+        b.onclick = () => {
+            if(o.effects) {
+                Object.entries(o.effects).forEach(([k,v]) => state.stats[k] = (state.stats[k] || 0) + v);
+            }
+            render(o.next || currentId);
+        };
+        area.appendChild(b);
+    });
+}
+
+/* --- MAKER LOGIC --- */
+let curId = "start";
+
+function tab(t) {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('nav-' + t).classList.add('active');
+    
+    document.getElementById('view-player').style.display = t==='player'?'flex':'none';
+    document.getElementById('view-maker').style.display = t==='maker'?'flex':'none';
+    
+    if(t==='player') init(); 
+    else syncMaker();
+}
+
+function syncMaker() {
+    const list = document.getElementById('node-list'); 
+    list.innerHTML = "";
+    Object.keys(sc.scenes).forEach(id => {
+        const d = document.createElement('div'); 
+        d.className = `node-card ${curId===id?'active':''}`;
+        d.innerText = id; 
+        d.onclick = () => loadNode(id);
+        list.appendChild(d);
+    });
+}
+
+function loadNode(id) {
+    curId = id; 
+    const n = sc.scenes[id];
+    document.getElementById('node-editor').style.display = "block";
+    document.getElementById('ed-id').value = id;
+    document.getElementById('ed-text').value = n.text;
+    
+    const optList = document.getElementById('opt-list');
+    optList.innerHTML = "";
+    n.options.forEach((o, idx) => {
+        const div = document.createElement('div');
+        div.className = "opt-item";
+        div.innerHTML = `
+            <input placeholder="Button Text" value="${o.text}" oninput="sc.scenes['${id}'].options[${idx}].text=this.value">
+            <input placeholder="Next Node ID" value="${o.next}" oninput="sc.scenes['${id}'].options[${idx}].next=this.value">
+            <button class="btn" style="color:var(--sub); margin-top:5px;" onclick="removeOpt(${idx})">Remove</button>
+        `;
+        optList.appendChild(div);
+    });
+    syncMaker();
+}
+
+function addNode() {
+    const newId = "node_" + Date.now().toString().slice(-4);
+    sc.scenes[newId] = { text: "새로운 장면입니다.", options: [], autoEvents: [] };
+    loadNode(newId);
+}
+
+function updText(v) { sc.scenes[curId].text = v; }
+
+function addOpt() {
+    if(!sc.scenes[curId].options) sc.scenes[curId].options = [];
+    sc.scenes[curId].options.push({text: "새 선택지", next: "start"});
+    loadNode(curId);
+}
+
+function removeOpt(idx) {
+    sc.scenes[curId].options.splice(idx, 1);
+    loadNode(curId);
+}
+
+function renameNode(v) {
+    if(!v || v === curId) return;
+    sc.scenes[v] = sc.scenes[curId];
+    delete sc.scenes[curId];
+    curId = v;
+    syncMaker();
+}
+
+function exportData() { 
+    const dataStr = JSON.stringify(sc, null, 2);
+    const blob = new Blob([dataStr], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = "scenario.json";
+    a.click();
+}
+
+function showModal(t, n) { 
+    document.getElementById('modal-text').innerText = t; 
+    document.getElementById('modal').style.display="flex"; 
+    state.nextScene = n; 
+}
+
+function closeModal() { 
+    document.getElementById('modal').style.display="none"; 
+    if(state.nextScene) render(state.nextScene); 
+}
+
+// Initial Run
+init();
 </script>
 </body>
 </html>
