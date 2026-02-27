@@ -1,0 +1,36 @@
+:root { 
+    --bg: #0f1115; 
+    --card: #1a1d23; 
+    --btn: #2c3e50; 
+    --text: #e0e0e0; 
+    --point: #0097e6; 
+    --danger: #c0392b; 
+    --orange: #e67e22;
+}
+
+body { 
+    background: var(--bg); 
+    color: var(--text); 
+    font-family: 'Pretendard', -apple-system, sans-serif; 
+    margin: 0; 
+    line-height: 1.6; 
+}
+
+/* 커스텀 메시지 박스 (No Alert) */
+#msg-box { 
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 90%; max-width: 450px; background: var(--card); border: 2px solid var(--point);
+    padding: 30px; border-radius: 15px; box-shadow: 0 0 50px rgba(0,0,0,0.8);
+    z-index: 2000; text-align: center; display: none;
+}
+
+#msg-box h2 { color: var(--point); margin-top: 0; }
+#msg-box button { 
+    background: var(--point); color: white; border: none; padding: 12px; 
+    border-radius: 8px; cursor: pointer; margin-top: 20px; width: 100%; font-weight: bold; 
+}
+
+.btn { cursor: pointer; padding: 10px 15px; border: none; border-radius: 5px; font-weight: bold; color: white; transition: 0.2s; }
+.btn-blue { background: var(--point); }
+.btn-orange { background: var(--orange); }
+.btn-red { background: var(--danger); }
