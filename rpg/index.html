@@ -1,72 +1,214 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head><meta charset="UTF-8"><title>Player v6.2.5</title><link rel="stylesheet" href="common.css"></head>
+<head>
+    <meta charset="UTF-8">
+    <title>ENGINE v6.3.0 FINAL</title>
+    <style>
+        :root { --bg: #0f1115; --card: #1a1d23; --text: #e0e0e0; --point: #00d2ff; --sub: #ff9f43; --danger: #ff4757; --border: #333; }
+        body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; overflow: hidden; }
+        .container { max-width: 1000px; height: 100vh; margin: 0 auto; display: flex; flex-direction: column; }
+        nav { background: #1a1d23; display: flex; border-bottom: 1px solid var(--border); }
+        .nav-btn { flex: 1; padding: 15px; text-align: center; cursor: pointer; border: none; background: none; color: #888; font-weight: bold; }
+        .nav-btn.active { color: var(--point); border-bottom: 3px solid var(--point); background: rgba(0,210,255,0.05); }
+        .btn { padding: 10px 15px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; }
+        .btn-blue { background: var(--point); color: #000; }
+        .btn-orange { background: var(--sub); color: #000; }
+        .btn-red { background: var(--danger); color: #fff; }
+        input, textarea, select { width: 100%; padding: 10px; background: #000; border: 1px solid var(--border); color: #fff; border-radius: 5px; box-sizing: border-box; margin-top: 5px; }
+        #player-view, #maker-view { flex: 1; display: none; overflow: hidden; padding: 20px; }
+        #status-bar { display: flex; flex-wrap: wrap; gap: 15px; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); margin-bottom: 10px; color: var(--point); font-weight: bold; border-radius: 8px; }
+        #inventory-bar { background: rgba(255,159,67,0.1); padding: 10px; border-radius: 8px; margin-bottom: 15px; border-left: 5px solid var(--sub); color: var(--sub); font-size: 0.9em; }
+        #scene-scroll { flex: 1; overflow-y: auto; margin-bottom: 15px; }
+        #scene-text { font-size: 1.1em; white-space: pre-wrap; line-height: 1.7; }
+        .game-btn { display: block; width: 100%; padding: 18px; margin: 10px 0; background: var(--card); color: #fff; border: 1px solid var(--border); border-left: 5px solid var(--point); border-radius: 10px; cursor: pointer; text-align: left; }
+        .game-btn:hover:not(:disabled) { border-color: var(--sub); transform: translateX(5px); }
+        .game-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        #maker-view { padding: 0; flex-direction: row; }
+        #side { width: 250px; border-right: 1px solid var(--border); overflow-y: auto; background: #15181c; padding: 15px; }
+        #edit { flex: 1; padding: 25px; overflow-y: auto; }
+        .opt-edit-card { background: #1e2228; padding: 15px; border-radius: 10px; margin-top: 15px; border: 1px solid #444; }
+        #msg-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; max-width: 450px; background: var(--card); border: 2px solid var(--sub); padding: 25px; border-radius: 20px; display: none; z-index: 10000; text-align: center; }
+    </style>
+</head>
 <body>
-    <div id="load-screen" class="container" style="justify-content:center;align-items:center;">
-        <h1 style="color:var(--point)">🎮 ENGINE v6.2.5</h1>
-        <input type="file" id="loader" accept=".json">
+    <div class="container">
+        <nav id="top-nav">
+            <button class="nav-btn active" onclick="switchTab('player')">PLAY</button>
+            <button class="nav-btn" onclick="switchTab('maker')">MAKER</button>
+            <div style="padding:10px;"><input type="file" id="loader" style="display:none" onchange="loadFile(event)"><button class="btn btn-orange" onclick="document.getElementById('loader').click()">📂 LOAD JSON</button></div>
+        </nav>
+
+        <div id="player-view" style="display: flex; flex-direction: column;">
+            <div id="status-bar"></div><div id="inventory-bar"></div>
+            <div id="scene-scroll"><div id="scene-text">데이터를 로드해 주세요.</div></div>
+            <div id="options-box"></div>
+        </div>
+
+        <div id="maker-view">
+            <div id="side"><button class="btn btn-blue" style="width:100%" onclick="addNode()">+ 장면 추가</button><div id="node-list" style="margin-top:15px;"></div></div>
+            <div id="edit">
+                <div class="opt-edit-card" style="margin-top:0; border-color: var(--point);">
+                    <strong style="color:var(--point)">GLOBAL CONFIG</strong>
+                    <div style="display:grid; grid-template-columns:2fr 1fr 1fr; gap:10px; margin-top:10px;">
+                        <input type="text" id="cfg-title" placeholder="게임 제목" oninput="sc.config.title=this.value">
+                        <div>메인<input type="color" id="cfg-main" oninput="updColor('themeColor', this.value)"></div>
+                        <div>서브<input type="color" id="cfg-sub" oninput="updColor('subColor', this.value)"></div>
+                    </div>
+                    <div id="stat-list"></div>
+                    <button class="btn btn-blue" style="width:100%; margin-top:10px;" onclick="addStat()">+ 스탯 추가</button>
+                    <button class="btn btn-orange" style="width:100%; margin-top:5px;" onclick="saveFile()">💾 시나리오 저장</button>
+                </div>
+                <div id="node-editor" style="display:none">
+                    <div style="display:flex; gap:10px; align-items:center; margin-top:20px;">
+                        <strong>ID:</strong><input type="text" id="ed-id" onblur="renameNode()" style="width:150px;">
+                        <button class="btn btn-orange" onclick="addAuto()">+ 자동이벤트</button>
+                        <button class="btn btn-blue" onclick="addOpt()">+ 선택지 추가</button>
+                    </div>
+                    <textarea id="ed-text" rows="5" oninput="sc.scenes[cur].text=this.value" style="margin-top:10px;"></textarea>
+                    <div id="auto-list"></div><div id="opt-list"></div>
+                </div>
+            </div>
+        </div>
     </div>
-    <div id="game-ui" class="container" style="display:none">
-        <div id="status-bar"></div><div id="inventory-bar"></div>
-        <div id="scene-scroll"><div id="scene-text"></div></div>
-        <div id="options-box"></div>
-    </div>
-    <div id="msg-box"><div id="msg-content" style="margin-bottom:20px;text-align:left;"></div><button class="btn btn-blue" style="width:100%" onclick="closeMsg()">확인</button></div>
+    <div id="msg-box"><div id="msg-content" style="margin-bottom:20px;"></div><button class="btn btn-blue" style="width:100%" onclick="closeMsg()">확인</button></div>
+
 <script>
-    let sc, state = { stats: {}, inv: new Set(), clicks: {}, next: null };
-    document.getElementById('loader').onchange = e => {
+    let sc = { config: { title: "New Game", themeColor: "#00d2ff", subColor: "#ff9f43", startNode: "start", stats: [] }, scenes: { "start": { text: "내용", options: [] } } };
+    let cur = "start", state = { stats: {}, inv: new Set(), clicks: {}, next: null };
+
+    function switchTab(tab) {
+        document.querySelectorAll('.nav-btn').forEach(b => {
+            b.classList.remove('active');
+            if(b.innerText.toLowerCase() === tab) b.classList.add('active');
+        });
+        document.getElementById('player-view').style.display = tab === 'player' ? 'flex' : 'none';
+        document.getElementById('maker-view').style.display = tab === 'maker' ? 'flex' : 'none';
+        if(tab === 'player') initPlayer();
+    }
+
+    function loadFile(e) {
         const r = new FileReader();
         r.onload = ev => {
             sc = JSON.parse(ev.target.result);
-            if(sc.config.themeColor) document.documentElement.style.setProperty('--point', sc.config.themeColor);
-            if(sc.config.subColor) document.documentElement.style.setProperty('--sub', sc.config.subColor);
-            document.getElementById('load-screen').style.display = 'none';
-            document.getElementById('game-ui').style.display = 'flex';
-            init();
+            applyTheme();
+            updateMakerUI();
+            switchTab('player'); // 여기서 모든 렌더링이 시작됨
         }; r.readAsText(e.target.files[0]);
-    };
-    function init() {
+    }
+
+    function saveFile() { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(sc, null, 2)])); a.download="scenario.json"; a.click(); }
+    function updColor(k, v) { sc.config[k] = v; applyTheme(); }
+    function applyTheme() {
+        document.documentElement.style.setProperty('--point', sc.config.themeColor);
+        document.documentElement.style.setProperty('--sub', sc.config.subColor);
+        document.getElementById('cfg-main').value = sc.config.themeColor;
+        document.getElementById('cfg-sub').value = sc.config.subColor;
+    }
+
+    function initPlayer() {
         state.inv = new Set(); state.clicks = {};
-        sc.config.stats.forEach(s => state.stats[s.key] = Number(s.initial));
-        render(sc.config.startNode);
+        (sc.config.stats || []).forEach(s => state.stats[s.key] = Number(s.initial));
+        renderPlayer(sc.config.startNode || "start");
     }
-    function updateUI() {
-        document.getElementById('status-bar').innerHTML = sc.config.stats.map(s => `<span>${s.label}: ${state.stats[s.key]}</span>`).join(' | ');
-        document.getElementById('inventory-bar').innerText = "🎒 소지품: " + (state.inv.size ? Array.from(state.inv).join(', ') : "없음");
-    }
-    function applyData(obj) {
-        if(!obj) return;
-        if(obj.effects) Object.keys(obj.effects).forEach(k => state.stats[k] = (state.stats[k]||0) + Number(obj.effects[k]));
-        if(obj.getItem) obj.getItem.split(',').forEach(v => v.trim() && state.inv.add(v.trim()));
-        if(obj.removeItem) obj.removeItem.split(',').forEach(v => v.trim() && state.inv.delete(v.trim()));
-    }
-    function render(id) {
+
+    function renderPlayer(id) {
         const n = sc.scenes[id]; if(!n) return;
         if(n.autoEvents) {
-            for(let e of n.autoEvents) {
-                if((state.stats[e.statKey]||0) < (e.threshold||0)) { showMsg(e.message, e.next||id); return; }
-            }
+            for(let e of n.autoEvents) { if((state.stats[e.statKey]||0) < (e.threshold||0)) { showMsg(e.message, e.next||id); return; } }
         }
-        updateUI();
+        document.getElementById('status-bar').innerHTML = (sc.config.stats || []).map(s => `<span>${s.label}: ${state.stats[s.key]}</span>`).join(' | ');
+        document.getElementById('inventory-bar').innerText = "🎒 소지품: " + (state.inv.size ? Array.from(state.inv).join(', ') : "없음");
         document.getElementById('scene-text').innerText = n.text;
         const box = document.getElementById('options-box'); box.innerHTML = '';
-        n.options.forEach((o, i) => {
-            const btn = document.createElement('button'); btn.className = 'game-btn'; btn.innerText = o.text;
+        (n.options || []).forEach((o, i) => {
+            const cKey = `${id}_${i}`;
+            if(o.maxClicks && (state.clicks[cKey]||0) >= o.maxClicks) return;
+            const btn = document.createElement('button'); btn.className = 'game-btn';
+            btn.innerText = o.text + (o.maxClicks ? ` (${state.clicks[cKey]||0}/${o.maxClicks})` : "");
             let ok = true, miss = [];
             if(o.requireItem) o.requireItem.split(',').forEach(v => { if(v.trim() && !state.inv.has(v.trim())) { ok = false; miss.push(v.trim()); }});
-            if(!ok) { btn.disabled = true; btn.innerText += ` (필요: ${miss.join(',')})`; }
+            if(!ok) { btn.disabled = true; btn.innerText += ` [필요: ${miss.join(',')}]`; }
             btn.onclick = () => {
-                if(o.isReset) return init();
+                state.clicks[cKey] = (state.clicks[cKey]||0) + 1;
+                if(o.isReset) return initPlayer();
                 applyData(o);
                 if(o.results?.length > 0) {
                     let roll = Math.random()*100, acc = 0, res = o.results[o.results.length-1];
                     for(let r of o.results) { acc += r.chance; if(roll <= acc) { res = r; break; } }
                     applyData(res); showMsg(res.message, res.next || o.next || id);
-                } else { render(o.next || id); }
-            };
-            box.appendChild(btn);
+                } else { renderPlayer(o.next || id); }
+            }; box.appendChild(btn);
         });
     }
+
+    function applyData(obj) {
+        if(obj.effects) Object.keys(obj.effects).forEach(k => state.stats[k] = (state.stats[k]||0) + Number(obj.effects[k]));
+        if(obj.getItem) obj.getItem.split(',').forEach(v => v.trim() && state.inv.add(v.trim()));
+        if(obj.removeItem) obj.removeItem.split(',').forEach(v => v.trim() && state.inv.delete(v.trim()));
+    }
     function showMsg(t, n) { document.getElementById('msg-content').innerText = t; document.getElementById('msg-box').style.display = 'block'; state.next = n; }
-    function closeMsg() { document.getElementById('msg-box').style.display = 'none'; render(state.next); }
-</script></body></html>
+    function closeMsg() { document.getElementById('msg-box').style.display = 'none'; renderPlayer(state.next); }
+
+    function updateMakerUI() {
+        document.getElementById('cfg-title').value = sc.config.title;
+        renderStats(); renderNodeList(); loadNode(sc.config.startNode || "start");
+    }
+    function renderStats() {
+        const l = document.getElementById('stat-list'); l.innerHTML = '';
+        (sc.config.stats || []).forEach((s, i) => {
+            const d = document.createElement('div'); d.style.display="flex"; d.style.gap="5px"; d.style.marginTop="5px";
+            d.innerHTML = `<input type="text" value="${s.label}" oninput="sc.config.stats[${i}].label=this.value"><input type="text" value="${s.key}" onblur="sc.config.stats[${i}].key=this.value"><input type="number" value="${s.initial}" oninput="sc.config.stats[${i}].initial=Number(this.value)"><button class="btn btn-red" onclick="sc.config.stats.splice(${i},1); renderStats();">X</button>`;
+            l.appendChild(d);
+        });
+    }
+    function renderNodeList() {
+        const l = document.getElementById('node-list'); l.innerHTML = '';
+        Object.keys(sc.scenes).forEach(id => {
+            const d = document.createElement('div'); d.innerText = id; d.className = "game-btn"; d.style.padding = "10px";
+            d.style.borderColor = cur === id ? "var(--point)" : "#333"; d.onclick = () => loadNode(id); l.appendChild(d);
+        });
+    }
+    function loadNode(id) {
+        cur = id; document.getElementById('node-editor').style.display = 'block';
+        document.getElementById('ed-id').value = id; document.getElementById('ed-text').value = sc.scenes[id].text;
+        renderNodeList(); renderOpts(); renderAutos();
+    }
+    function renderOpts() {
+        const l = document.getElementById('opt-list'); l.innerHTML = '';
+        (sc.scenes[cur].options || []).forEach((o, i) => {
+            const d = document.createElement('div'); d.className = 'opt-edit-card';
+            d.innerHTML = `<div style="display:flex; gap:10px;"><input type="text" value="${o.text||''}" oninput="sc.scenes['${cur}'].options[${i}].text=this.value"><label style="font-size:11px;"><input type="checkbox" ${o.isReset?'checked':''} onchange="sc.scenes['${cur}'].options[${i}].isReset=this.checked"> 초기화</label></div>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:5px; margin-top:8px;">
+                    <input type="text" placeholder="다음ID" value="${o.next||''}" oninput="sc.scenes['${cur}'].options[${i}].next=this.value">
+                    <input type="number" placeholder="클릭제한" value="${o.maxClicks||''}" oninput="sc.scenes['${cur}'].options[${i}].maxClicks=Number(this.value)">
+                    <input type="text" placeholder="필요템" value="${o.requireItem||''}" oninput="sc.scenes['${cur}'].options[${i}].requireItem=this.value">
+                    <input type="text" placeholder="획득템" value="${o.getItem||''}" oninput="sc.scenes['${cur}'].options[${i}].getItem=this.value">
+                    <input type="text" placeholder="소모템" value="${o.removeItem||''}" oninput="sc.scenes['${cur}'].options[${i}].removeItem=this.value">
+                    <button class="btn btn-red" onclick="sc.scenes['${cur}'].options.splice(${i},1); renderOpts();">삭제</button>
+                </div><div id="res-${i}"></div><button class="btn btn-orange" style="width:100%;margin-top:8px;" onclick="addRes(${i})">+ 확률 결과 추가</button>`;
+            l.appendChild(d);
+            (o.results || []).forEach((r, ri) => {
+                const rd = document.createElement('div'); rd.style.border="1px dashed #555"; rd.style.padding="5px"; rd.style.marginTop="5px";
+                rd.innerHTML = `<div style="display:flex;gap:5px;"><input type="number" value="${r.chance}" style="width:50px" oninput="sc.scenes['${cur}'].options[${i}].results[${ri}].chance=Number(this.value)">% <input type="text" placeholder="이동" value="${r.next||''}" oninput="sc.scenes['${cur}'].options[${i}].results[${ri}].next=this.value"><input type="text" placeholder="획득템" value="${r.getItem||''}" oninput="sc.scenes['${cur}'].options[${i}].results[${ri}].getItem=this.value"></div><textarea oninput="sc.scenes['${cur}'].options[${i}].results[${ri}].message=this.value">${r.message||''}</textarea>`;
+                d.querySelector(`#res-${i}`).appendChild(rd);
+            });
+        });
+    }
+    function renderAutos() {
+        const l = document.getElementById('auto-list'); l.innerHTML = '';
+        (sc.scenes[cur].autoEvents || []).forEach((e, i) => {
+            const d = document.createElement('div'); d.style.border="1px solid var(--sub)"; d.style.padding="10px"; d.style.marginTop="10px";
+            d.innerHTML = `<select onchange="sc.scenes['${cur}'].autoEvents[${i}].statKey=this.value">${sc.config.stats.map(s=>`<option value="${s.key}" ${s.key===e.statKey?'selected':''}>${s.label}</option>`).join('')}</select> <input type="number" value="${e.threshold}" oninput="sc.scenes['${cur}'].autoEvents[${i}].threshold=Number(this.value)"> 미만 시 <input type="text" placeholder="이동ID" value="${e.next||''}" oninput="sc.scenes['${cur}'].autoEvents[${i}].next=this.value"><textarea oninput="sc.scenes['${cur}'].autoEvents[${i}].message=this.value">${e.message||''}</textarea><button class="btn btn-red" style="width:100%" onclick="sc.scenes['${cur}'].autoEvents.splice(${i},1); renderAutos();">삭제</button>`;
+            l.appendChild(d);
+        });
+    }
+    function addStat() { sc.config.stats.push({key:"stat_"+Date.now(), label:"신규스탯", initial:0}); renderStats(); }
+    function addNode() { const id = "node_"+Date.now(); sc.scenes[id] = {text:"", options:[]}; renderNodeList(); loadNode(id); }
+    function addOpt() { if(!sc.scenes[cur].options) sc.scenes[cur].options=[]; sc.scenes[cur].options.push({text:"새 선택지", next:cur}); renderOpts(); }
+    function addRes(i) { if(!sc.scenes[cur].options[i].results) sc.scenes[cur].options[i].results = []; sc.scenes[cur].options[i].results.push({chance:50, message:"", next:"", getItem:""}); renderOpts(); }
+    function addAuto() { if(!sc.scenes[cur].autoEvents) sc.scenes[cur].autoEvents = []; sc.scenes[cur].autoEvents.push({statKey:sc.config.stats[0]?.key, threshold:0, next:"", message:""}); renderAutos(); }
+    function renameNode() { const n = document.getElementById('ed-id').value; if(n&&n!==cur){ sc.scenes[n]=sc.scenes[cur]; delete sc.scenes[cur]; cur=n; renderNodeList(); } }
+    switchTab('player');
+</script>
+</body>
+</html>
