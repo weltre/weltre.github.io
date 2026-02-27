@@ -1,22 +1,21 @@
 :root { 
-    --bg: #0f1115; --card: #1a1d23; --btn: #2c3e50; --text: #e0e0e0; 
+    --bg: #0f1115; --card: #1a1d23; --text: #e0e0e0; 
     --point: #00d2ff; --sub: #ff9f43; --danger: #ff4757; --border: #333;
 }
-body { background: var(--bg); color: var(--text); font-family: 'Pretendard', sans-serif; margin: 0; line-height: 1.6; overflow: hidden; }
-.container { max-width: 800px; height: 100vh; margin: 0 auto; padding: 25px; display: flex; flex-direction: column; box-sizing: border-box; }
-#status-bar { display: flex; flex-wrap: wrap; gap: 15px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 10px; border: 1px solid var(--border); margin-bottom: 15px; font-weight: 800; color: var(--point); }
-#inventory-bar { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid var(--sub); color: var(--sub); font-weight: bold; }
-#scene-scroll { flex-grow: 1; overflow-y: auto; padding-right: 10px; margin-bottom: 20px; }
-#scene-text { font-size: 1.15em; white-space: pre-wrap; word-break: keep-all; }
-.game-btn { display: block; width: 100%; padding: 18px; margin: 10px 0; background: var(--card); color: var(--text); border: 1px solid var(--border); border-left: 5px solid var(--point); border-radius: 10px; cursor: pointer; text-align: left; transition: 0.2s; font-size: 1em; }
-.game-btn:hover:not(:disabled) { border-color: var(--sub); transform: translateX(5px); background: #252a31; }
+body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; overflow: hidden; }
+.container { max-width: 800px; height: 100vh; margin: 0 auto; padding: 20px; display: flex; flex-direction: column; box-sizing: border-box; }
+#status-bar { display: flex; flex-wrap: wrap; gap: 15px; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); margin-bottom: 10px; color: var(--point); font-weight: bold; border-radius: 8px; }
+#inventory-bar { background: rgba(255,159,67,0.1); padding: 10px; border-radius: 8px; margin-bottom: 15px; border-left: 5px solid var(--sub); color: var(--sub); font-size: 0.9em; }
+#scene-scroll { flex: 1; overflow-y: auto; margin-bottom: 15px; }
+#scene-text { font-size: 1.1em; white-space: pre-wrap; line-height: 1.7; }
+.game-btn { display: block; width: 100%; padding: 18px; margin: 10px 0; background: var(--card); color: #fff; border: 1px solid var(--border); border-left: 5px solid var(--point); border-radius: 10px; cursor: pointer; text-align: left; transition: 0.2s; }
+.game-btn:hover:not(:disabled) { border-color: var(--sub); transform: translateX(5px); }
 .game-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-#msg-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; max-width: 450px; background: var(--card); border: 2px solid var(--sub); padding: 25px; border-radius: 20px; box-shadow: 0 0 50px rgba(0,0,0,0.9); z-index: 10000; display: none; text-align: center; }
-/* Maker 전용 디자인 */
+#msg-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; max-width: 450px; background: var(--card); border: 2px solid var(--sub); padding: 25px; border-radius: 20px; display: none; z-index: 10000; text-align: center; }
 .opt-edit-card { background: #1e2228; padding: 15px; border-radius: 10px; margin-top: 15px; border: 1px solid #333; }
-.res-edit-card { background: #15181c; padding: 12px; border-radius: 8px; margin-top: 10px; border: 1px dashed #444; }
+.res-edit-card { background: #15181c; padding: 10px; border-radius: 8px; margin-top: 5px; border: 1px dashed #444; }
 .btn { padding: 10px 15px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; }
 .btn-blue { background: var(--point); color: #000; }
 .btn-orange { background: var(--sub); color: #000; }
 .btn-red { background: var(--danger); color: #fff; }
-input, textarea, select { width: 100%; padding: 10px; background: #0f1115; border: 1px solid #333; color: #fff; border-radius: 5px; box-sizing: border-box; margin-top: 5px; }
+input, textarea, select { width: 100%; padding: 10px; background: #000; border: 1px solid #333; color: #fff; border-radius: 5px; box-sizing: border-box; margin-top: 5px; }
