@@ -1,80 +1,76 @@
 {
   "config": {
-    "title": "드래곤 슬레이어: 서막",
-    "startNode": "village_gate",
-    "themeColor": "#2c3e50",
-    "subColor": "#e67e22",
+    "title": "설산의 고립: 생존의 밤",
+    "startNode": "crash_site",
+    "themeColor": "#a5b1c2",
+    "subColor": "#eb3b5a",
     "stats": [
-      { "key": "hp", "label": "❤️ 체력", "initial": 20 },
-      { "key": "gold", "label": "💰 골드", "initial": 10 },
-      { "key": "fame", "label": "✨ 명성", "initial": 0 }
+      { "key": "hp", "label": "🌡️ 체온", "initial": 50 },
+      { "key": "mental", "label": "🧠 정신력", "initial": 30 },
+      { "key": "battery", "label": "🔋 손전등", "initial": 100 }
     ]
   },
   "scenes": {
-    "village_gate": {
-      "text": "당신은 전설의 검사가 되기 위해 고향 마을을 떠나려 합니다.\n마을 입구에는 늙은 경비병이 졸고 있습니다.",
+    "crash_site": {
+      "text": "비행기 추락 후, 당신은 눈보라 치는 설산 한복판에서 눈을 떴습니다.\n멀리 희미하게 버려진 산장이 보입니다. 체온이 빠르게 떨어지고 있습니다.",
+      "autoEvents": [
+        { "statKey": "hp", "threshold": 5, "next": "frozen_death", "message": "몸이 딱딱하게 굳어갑니다. 더 이상 움직일 수 없습니다..." }
+      ],
       "options": [
-        { "text": "정중하게 인사를 건넨다", "effects": { "fame": 1 }, "next": "gate_pass" },
+        { "text": "산장을 향해 필사적으로 달린다", "effects": { "hp": -10 }, "next": "cabin_front" },
         { 
-          "text": "몰래 주머니를 뒤진다 (확률)", 
+          "text": "주변 잔해를 뒤져본다 (확률)", 
           "results": [
-            { "chance": 40, "message": "성공했습니다! 소액의 골드를 훔쳤습니다.", "effects": { "gold": 15, "fame": -1 } },
-            { "chance": 60, "message": "들켰습니다! 경비병에게 한 대 맞고 쫓겨납니다.", "effects": { "hp": -5 } }
-          ],
-          "next": "gate_pass"
+            { "chance": 70, "message": "눈 속에 파묻힌 비상 식량과 손난로를 찾았습니다!", "getItem": "비상 식량, 손난로", "next": "crash_site" },
+            { "chance": 30, "message": "날카로운 파편에 손을 베었습니다. 체온이 더 떨어집니다.", "effects": { "hp": -15 }, "next": "crash_site" }
+          ]
         }
       ]
     },
-    "gate_pass": {
-      "text": "마을을 벗어나자 갈림길이 나타납니다.\n왼쪽은 으스스한 '고블린 숲', 오른쪽은 번화한 '왕도'입니다.",
-      "autoEvents": [
-        { "statKey": "hp", "threshold": 1, "next": "death", "message": "상처가 깊어 더 이상 걸을 수 없습니다..." }
-      ],
+    "cabin_front": {
+      "text": "산장 문 앞에 도착했습니다. 문은 굳게 잠겨 있고, 기괴한 긁힌 자국이 가득합니다.",
       "options": [
-        { "text": "고블린 숲으로 향한다", "next": "goblin_forest" },
-        { "text": "왕도로 향한다 (통행료 20G 필요)", "effects": { "gold": -20 }, "next": "royal_city" }
+        { "text": "어깨로 문을 부순다", "effects": { "hp": -5, "mental": -5 }, "next": "cabin_inside" },
+        { "text": "손난로를 사용해 자물쇠를 녹인다", "requireItem": "손난로", "removeItem": "손난로", "next": "cabin_inside" }
       ]
     },
-    "goblin_forest": {
-      "text": "[전투 발생]\n굶주린 고블린이 나타났습니다! 놈의 손에는 녹슨 단검이 들려 있습니다.",
-      "autoEvents": [
-        { "statKey": "hp", "threshold": 1, "next": "death", "message": "고블린의 칼날에 쓰러졌습니다..." }
-      ],
+    "cabin_inside": {
+      "text": "어두운 산장 내부입니다. 무언가 썩는 냄새가 진동합니다.\n바닥에 낡은 일기장이 떨어져 있습니다.",
       "options": [
         { 
-          "text": "필사적으로 싸운다!", 
+          "text": "일기장을 읽어본다 (정신력 소모)", 
+          "effects": { "mental": -10, "battery": -20 },
           "results": [
-            { "chance": 50, "message": "승리했습니다! 고블린의 단검을 뺏었습니다.", "getItem": "녹슨 단검", "effects": { "fame": 5 } },
-            { "chance": 50, "message": "반격당했습니다! 겨우 도망칩니다.", "effects": { "hp": -10 } }
+            { "chance": 100, "message": "'그것은 어둠 속에 산다...' 일기장에는 경고문이 적혀 있습니다.", "getItem": "괴물의 약점 정보", "next": "cabin_inside" }
           ],
-          "next": "forest_clear"
+          "maxClicks": 1
+        },
+        { "text": "지하실로 내려간다", "next": "basement" }
+      ]
+    },
+    "basement": {
+      "text": "지하실 계단 끝에서 붉은 눈의 괴물과 마주쳤습니다!\n당신은 어떻게 하시겠습니까?",
+      "options": [
+        { "text": "괴물과 정면으로 싸운다", "effects": { "hp": -100 }, "next": "frozen_death" },
+        { 
+          "text": "빛을 비춰 괴물을 쫓아낸다", 
+          "requireItem": "괴물의 약점 정보",
+          "results": [
+            { "chance": 100, "message": "일기장에서 읽은 대로 빛을 비추자 괴물이 비명을 지르며 도망칩니다!", "next": "escape_end" }
+          ]
         }
       ]
     },
-    "forest_clear": {
-      "text": "숲을 빠져나왔습니다. 손에는 전리품이 들려 있습니다.",
+    "frozen_death": {
+      "text": "당신은 차가운 설산의 일부가 되었습니다.\n진실은 영원히 눈 속에 묻힐 것입니다.",
       "options": [
-        { "text": "다시 길을 떠난다", "next": "gate_pass" }
+        { "text": "처음부터 다시 도전", "isReset": true }
       ]
     },
-    "royal_city": {
-      "text": "왕도의 화려한 불빛이 당신을 반깁니다.\n이곳에서 당신의 진정한 모험이 시작될 것입니다.",
-      "requireItem": "녹슨 단검",
+    "escape_end": {
+      "text": "괴물이 사라진 틈을 타 산장 뒤편의 무전기를 작동시켰습니다!\n새벽녘, 구조 헬기의 소리가 들려옵니다.\n\n[생존 성공]",
       "options": [
-        { "text": "무기점에 단검을 판다", "removeItem": "녹슨 단검", "effects": { "gold": 50 }, "next": "royal_city" },
-        { "text": "길드에 가입한다", "next": "happy_end" }
-      ]
-    },
-    "death": {
-      "text": "당신의 모험은 허망하게 끝났습니다.\n차디찬 바닥에서 눈을 감습니다.",
-      "options": [
-        { "text": "운명을 뒤바꾼다 (부활)", "isReset": true }
-      ]
-    },
-    "happy_end": {
-      "text": "당신은 왕도 길드의 정식 일원이 되었습니다!\n전설적인 드래곤 슬레이어로 기록될 첫 발을 내디뎠습니다.\n\n[데모 종료]",
-      "options": [
-        { "text": "다시 시작하기", "isReset": true }
+        { "text": "메인 화면으로", "isReset": true }
       ]
     }
   }
