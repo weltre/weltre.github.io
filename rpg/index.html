@@ -1,94 +1,64 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head>
-    <meta charset="UTF-8"><title>Adventure Player v6.1.7</title><link rel="stylesheet" href="common.css">
-</head>
+<head><meta charset="UTF-8"><title>Player</title><link rel="stylesheet" href="common.css"></head>
 <body>
-    <div id="load-screen" class="container" style="justify-content: center; align-items: center;">
-        <h1 style="color:var(--point)">🎮 ENGINE v6.1.7</h1>
-        <input type="file" id="loader" accept=".json" style="padding:20px; border:2px dashed var(--border);">
+    <div id="load-screen" class="container">
+        <input type="file" id="loader" accept=".json">
     </div>
     <div id="game-ui" class="container" style="display:none">
-        <div id="status-bar"></div>
-        <div id="inventory-bar"></div>
+        <div id="status-bar"></div><div id="inventory-bar"></div>
         <div id="scene-scroll"><div id="scene-text"></div></div>
         <div id="options-box"></div>
     </div>
-    <div id="msg-box"><h2>알림</h2><div id="msg-content"></div><button onclick="closeMsg()">확인</button></div>
-
+    <div id="msg-box"><div id="msg-content"></div><br><button onclick="closeMsg()">확인</button></div>
 <script>
-    let scenario, state = { stats: {}, inventory: new Set(), clickCounts: {}, nextNode: null };
-
-    document.getElementById('loader').onchange = (e) => {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            scenario = JSON.parse(ev.target.result);
-            if(scenario.config.themeColor) document.documentElement.style.setProperty('--point', scenario.config.themeColor);
-            if(scenario.config.subColor) document.documentElement.style.setProperty('--sub', scenario.config.subColor);
+    let sc, state = { stats: {}, inv: new Set(), clicks: {}, next: null };
+    document.getElementById('loader').onchange = e => {
+        const r = new FileReader();
+        r.onload = ev => {
+            sc = JSON.parse(ev.target.result);
+            if(sc.config.themeColor) document.documentElement.style.setProperty('--point', sc.config.themeColor);
             document.getElementById('load-screen').style.display = 'none';
             document.getElementById('game-ui').style.display = 'flex';
-            initGame();
-        };
-        reader.readAsText(e.target.files[0]);
+            init();
+        }; r.readAsText(e.target.files[0]);
     };
-
-    function initGame() {
-        state.inventory = new Set(); state.clickCounts = {};
-        scenario.config.stats.forEach(s => state.stats[s.key] = Number(s.initial));
-        renderNode(scenario.config.startNode);
+    function init() {
+        state.inv = new Set(); state.clicks = {};
+        sc.config.stats.forEach(s => state.stats[s.key] = Number(s.initial));
+        render(sc.config.startNode);
     }
-
-    function renderNode(nodeId) {
-        const node = scenario.scenes[nodeId];
-        if(!node) return;
-        if(node.autoEvents) {
-            for(let ev of node.autoEvents) {
-                if((state.stats[ev.statKey] || 0) < (ev.threshold || 0)) return showMsg(ev.message, ev.next || nodeId);
+    function updateUI() {
+        document.getElementById('status-bar').innerText = sc.config.stats.map(s => `${s.label}: ${state.stats[s.key]}`).join(' | ');
+        document.getElementById('inventory-bar').innerText = "🎒: " + Array.from(state.inv).join(', ');
+    }
+    function render(id) {
+        const n = sc.scenes[id]; if(!n) return;
+        if(n.autoEvents) {
+            for(let e of n.autoEvents) {
+                if((state.stats[e.statKey]||0) < (e.threshold||0)) { showMsg(e.message, e.next||id); return; }
             }
         }
         updateUI();
-        document.getElementById('scene-text').innerText = node.text;
-        const box = document.getElementById('options-box'); 
-        box.innerHTML = '';
-
-        node.options.forEach((opt, idx) => {
-            const optKey = `${nodeId}_${idx}`;
-            if(opt.maxClicks && (state.clickCounts[optKey] || 0) >= opt.maxClicks) return;
-
-            const btn = document.createElement('button');
-            btn.className = 'game-btn'; btn.innerText = opt.text;
-
-            let canAfford = true, missing = [];
-            if(opt.effects) Object.keys(opt.effects).forEach(k => { if((state.stats[k] || 0) + (opt.effects[k] || 0) < 0) canAfford = false; });
-            if(opt.requireItem) opt.requireItem.split(',').forEach(i => { if(i.trim() && !state.inventory.has(i.trim())) { canAfford = false; missing.push(i.trim()); } });
-
-            if(!canAfford) { btn.disabled = true; btn.innerText += " (조건 부족)"; }
-
+        document.getElementById('scene-text').innerText = n.text;
+        const box = document.getElementById('options-box'); box.innerHTML = '';
+        n.options.forEach((o, i) => {
+            if(o.maxClicks && (state.clicks[`${id}_${i}`]||0) >= o.maxClicks) return;
+            const btn = document.createElement('button'); btn.className = 'game-btn'; btn.innerText = o.text;
             btn.onclick = () => {
-                state.clickCounts[optKey] = (state.clickCounts[optKey] || 0) + 1;
-                if(opt.isReset) return initGame();
-                if(opt.effects) Object.keys(opt.effects).forEach(k => state.stats[k] = Math.max(0, (state.stats[k] || 0) + opt.effects[k]));
-                if(opt.getItem) opt.getItem.split(',').forEach(i => i.trim() && state.inventory.add(i.trim()));
-                if(opt.removeItem) opt.removeItem.split(',').forEach(i => i.trim() && state.inventory.delete(i.trim()));
-
-                if(opt.results?.length > 0) {
-                    let roll = Math.random()*100, acc = 0, res = opt.results[opt.results.length-1];
-                    for(let r of opt.results) { acc += r.chance; if(roll <= acc) { res = r; break; } }
-                    showMsg(res.message, res.next || opt.next || nodeId);
-                } else { renderNode(opt.next || nodeId); }
-                updateUI();
-            };
-            box.appendChild(btn);
+                state.clicks[`${id}_${i}`] = (state.clicks[`${id}_${i}`]||0) + 1;
+                if(o.isReset) return init();
+                if(o.effects) Object.keys(o.effects).forEach(k => state.stats[k] += o.effects[k]);
+                if(o.getItem) o.getItem.split(',').forEach(v => v.trim() && state.inv.add(v.trim()));
+                if(o.removeItem) o.removeItem.split(',').forEach(v => v.trim() && state.inv.delete(v.trim()));
+                if(o.results?.length > 0) {
+                    let roll = Math.random()*100, acc = 0, res = o.results[o.results.length-1];
+                    for(let r of o.results) { acc += r.chance; if(roll <= acc) { res = r; break; } }
+                    showMsg(res.message, res.next || o.next || id);
+                } else { render(o.next || id); }
+            }; box.appendChild(btn);
         });
     }
-
-    function updateUI() {
-        document.getElementById('status-bar').innerHTML = scenario.config.stats.map(s => `<span>${s.label}: ${state.stats[s.key] || 0}</span>`).join(' | ');
-        document.getElementById('inventory-bar').innerText = "🎒 소지품: " + (state.inventory.size ? Array.from(state.inventory).join(', ') : "없음");
-    }
-    function showMsg(t, n) { document.getElementById('msg-content').innerText = t; document.getElementById('msg-box').style.display = 'block'; state.nextNode = n; }
-    function closeMsg() { document.getElementById('msg-box').style.display = 'none'; if(state.nextNode) renderNode(state.nextNode); }
-</script>
-</body>
-</html>
-
+    function showMsg(t, n) { document.getElementById('msg-content').innerText = t; document.getElementById('msg-box').style.display = 'block'; state.next = n; }
+    function closeMsg() { document.getElementById('msg-box').style.display = 'none'; render(state.next); }
+</script></body></html>
