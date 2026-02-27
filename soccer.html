@@ -1,85 +1,36 @@
-<!DOCTYPE html><html><head><meta charset="UTF-8"><title>파워 소서</title>
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>2인 축구</title>
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="container">
     <div class="status-bar">
-        <div id="p1-score" style="font-size:40px; color:var(--p1); font-weight:bold;">0</div>
-        <div id="msg-area" style="min-width:200px;">
-            <div id="res-msg" style="font-size:22px; font-weight:bold; color:var(--timer);">매치 시작!</div>
-        </div>
-        <div id="p2-score" style="font-size:40px; color:var(--p2); font-weight:bold;">0</div>
+        <div id="p1-score" style="font-size:40px; color:#3498db; font-weight:bold;">0</div>
+        <div id="res-msg" style="font-size:22px; font-weight:bold; color:var(--timer); min-width:200px;">매치 시작!</div>
+        <div id="p2-score" style="font-size:40px; color:#e74c3c; font-weight:bold;">0</div>
     </div>
     <canvas id="soccerCanvas" width="760" height="460"></canvas>
-    <div class="info-text">P1(파랑): WASD | P2(빨강): 방향키<br>공을 상대방 골대로 밀어 넣으세요! 몸싸움이 가능합니다.<br><button onclick="location.href='index.html'">목록으로</button></div>
+    <div class="info-text">P1: WASD | P2: 방향키<br><button onclick="location.href='index.html'">목록으로</button></div>
 </div>
 <script>
     const cvs=document.getElementById("soccerCanvas"), ctx=cvs.getContext("2d");
     const p1s=document.getElementById("p1-score"), p2s=document.getElementById("p2-score"), msg=document.getElementById("res-msg");
-    let keys={}, isOver=false;
-
-    const ball = { x:380, y:230, vx:0, vy:0, r:12, f:0.98 };
-    const p1 = { x:150, y:230, vx:0, vy:0, r:25, score:0, color:"#3498db" };
-    const p2 = { x:610, y:230, vx:0, vy:0, r:25, score:0, color:"#e74c3c" };
-
-    window.onkeydown=e=>keys[e.key]=true; window.onkeyup=e=>keys[e.key]=false;
-
-    function resetPos() {
-        ball.x=380; ball.y=230; ball.vx=0; ball.vy=0;
-        p1.x=150; p1.y=230; p2.x=610; p2.y=230;
-    }
-
-    function collide(a, b, isBall) {
-        let dx=a.x-b.x, dy=a.y-b.y, dist=Math.hypot(dx, dy);
-        if(dist < a.r+b.r) {
-            let angle=Math.atan2(dy, dx);
-            let target=a.r+b.r;
-            let overlap=target-dist;
-            if(!isBall) { a.x+=Math.cos(angle)*overlap; a.y+=Math.sin(angle)*overlap; }
-            else { b.vx -= Math.cos(angle)*2; b.vy -= Math.sin(angle)*2; }
-        }
-    }
-
+    let keys={}, isOver=false, ball={x:380,y:230,vx:0,vy:0,r:12}, p1={x:150,y:230,score:0,r:25}, p2={x:610,y:230,score:0,r:25};
+    window.onkeydown=e=>keys[e.key.toLowerCase()]=keys[e.key]=true; 
+    window.onkeyup=e=>keys[e.key.toLowerCase()]=keys[e.key]=false;
     function loop() {
         if(!isOver) {
-            // 조종
-            if(keys['w']&&p1.y>25) p1.y-=5; if(keys['s']&&p1.y<435) p1.y+=5;
-            if(keys['a']&&p1.x>25) p1.x-=5; if(keys['d']&&p1.x<735) p1.x+=5;
-            if(keys['ArrowUp']&&p2.y>25) p2.y-=5; if(keys['ArrowDown']&&p2.y<435) p2.y+=5;
-            if(keys['ArrowLeft']&&p2.x>25) p2.x-=5; if(keys['ArrowRight']&&p2.x<735) p2.x+=5;
-
-            // 공 물리
-            ball.x+=ball.vx; ball.y+=ball.vy; ball.vx*=ball.f; ball.vy*=ball.f;
-            if(ball.x<12 || ball.x>748) ball.vx*=-1;
-            if(ball.y<12 || ball.y>448) ball.vy*=-1;
-
-            // 충돌 체크
-            collide(p1, ball, true); collide(p2, ball, true);
-            collide(p1, p2, false);
-
-            // 골 판정
-            if(ball.y > 155 && ball.y < 305) {
-                if(ball.x < 15) { p2.score++; p2s.innerText=p2.score; resetPos(); }
-                if(ball.x > 745) { p1.score++; p1s.innerText=p1.score; resetPos(); }
-            }
-            if(p1.score>=5 || p2.score>=5) { isOver=true; msg.innerText=(p1.score>=5?"파랑":"빨강")+" 최종 승리!"; }
+            if(keys['w']&&p1.y>25) p1.y-=5; if(keys['s']&&p1.y<435) p1.y+=5; if(keys['a']&&p1.x>25) p1.x-=5; if(keys['d']&&p1.x<735) p1.x+=5;
+            if(keys['arrowup']&&p2.y>25) p2.y-=5; if(keys['arrowdown']&&p2.y<435) p2.y+=5; if(keys['arrowleft']&&p2.x>25) p2.x-=5; if(keys['arrowright']&&p2.x<735) p2.x+=5;
+            ball.x+=ball.vx; ball.y+=ball.vy; ball.vx*=0.98; ball.vy*=0.98;
+            if(ball.x<15||ball.x>745) ball.vx*=-1; if(ball.y<15||ball.y>445) ball.vy*=-1;
+            [p1,p2].forEach(p=>{ let d=Math.hypot(ball.x-p.x,ball.y-p.y); if(d<ball.r+p.r){ let a=Math.atan2(ball.y-p.y,ball.x-p.x); ball.vx=Math.cos(a)*7; ball.vy=Math.sin(a)*7; } });
+            if(ball.y>150&&ball.y<310){ if(ball.x<20){p2.score++; reset();} if(ball.x>740){p1.score++; reset();} }
+            if(p1.score>=5||p2.score>=5){isOver=true; msg.innerText=(p1.score>=5?"파랑":"빨강")+" 승리!";}
         }
-
-        // 그리기
-        ctx.fillStyle="#1a1a1a"; ctx.fillRect(0,0,760,460);
-        // 경기장 라인
-        ctx.strokeStyle="rgba(255,255,255,0.1)"; ctx.lineWidth=2;
-        ctx.strokeRect(5,5,750,450); ctx.beginPath(); ctx.moveTo(380,5); ctx.lineTo(380,455); ctx.stroke();
-        ctx.beginPath(); ctx.arc(380,230,60,0,Math.PI*2); ctx.stroke();
-        // 골대 표시
-        ctx.fillStyle="#333"; ctx.fillRect(0, 155, 10, 150); ctx.fillRect(750, 155, 10, 150);
-        
-        // 플레이어 & 공
-        [p1, p2].forEach(p=>{
-            ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
-            ctx.strokeStyle="#fff"; ctx.lineWidth=3; ctx.stroke();
-        });
-        ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2); ctx.fill();
-        
+        ctx.fillStyle="#1a1a1a"; ctx.fillRect(0,0,760,460); ctx.strokeStyle="#333"; ctx.strokeRect(5,5,750,450);
+        ctx.fillStyle="#3498db"; ctx.beginPath(); ctx.arc(p1.x,p1.y,p1.r,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle="#e74c3c"; ctx.beginPath(); ctx.arc(p2.x,p2.y,p2.r,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2); ctx.fill();
         requestAnimationFrame(loop);
     }
+    function reset(){ ball.x=380;ball.y=230;ball.vx=0;ball.vy=0;p1.x=150;p1.y=230;p2.x=610;p2.y=230; p1s.innerText=p1.score; p2s.innerText=p2.score; }
     loop();
 </script></body></html>
