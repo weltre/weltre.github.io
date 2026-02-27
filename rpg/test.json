@@ -1,65 +1,107 @@
 {
   "config": {
-    "title": "심해의 부름: 산소 부족",
-    "startNode": "chamber_01",
+    "title": "심해의 부름 (The Deep Call)",
     "themeColor": "#00d2ff",
-    "subColor": "#7ed6df",
+    "subColor": "#ff4757",
+    "startNode": "start",
     "stats": [
-      { "key": "ox", "label": "🔵 산소 수치", "initial": 50 },
-      { "key": "pressure", "label": "⚓ 수압 견딤", "initial": 10 },
-      { "key": "mental", "label": "🧠 정신 오염", "initial": 0 }
+      { "key": "oxygen", "label": "산소도", "initial": 100 },
+      { "key": "sanity", "label": "정신력", "initial": 50 }
     ]
   },
   "scenes": {
-    "chamber_01": {
-      "text": "잠수정의 전력이 나갔습니다. 비상 조명만이 깜빡이는 어두운 객실입니다.\n멀리서 철판을 긁는 소리가 들려옵니다.",
-      "autoEvents": [
-        { "statKey": "ox", "threshold": 5, "next": "death_ox", "message": "산소가 부족해 의식을 잃어갑니다..." }
-      ],
+    "start": {
+      "text": "당신은 심해 4,000m 아래 침몰한 연구선 입구에 서 있습니다. 수압이 슈트를 압박하고, 산소 탱크의 잔량이 눈앞에 점멸합니다.\n\n어두운 복도 끝에서 희미한 빛이 보입니다.",
       "options": [
-        { 
-          "text": "캐비닛을 강제로 연다 (산소 소모)", 
-          "effects": { "ox": -10 },
-          "results": [
-            { "chance": 60, "message": "녹슨 문을 열어 '휴대용 산소통'과 '손전등'을 얻었습니다!", "getItem": "산소통, 손전등", "next": "chamber_01" },
-            { "chance": 40, "message": "문이 걸려 열리지 않습니다. 헛심만 썼습니다.", "next": "chamber_01" }
-          ]
+        {
+          "text": "복도를 조사한다 (산소 -10)",
+          "next": "corridor",
+          "effects": { "oxygen": -10 }
         },
-        { 
-          "text": "산소통을 사용하여 산소를 보충한다", 
-          "requireItem": "산소통",
-          "removeItem": "산소통",
-          "effects": { "ox": 40 },
-          "next": "chamber_01"
-        },
-        { "text": "조종실로 이동한다", "next": "cockpit" }
+        {
+          "text": "슈트를 점검하며 대기한다 (클릭 제한: 2회)",
+          "next": "start",
+          "maxClicks": 2,
+          "effects": { "sanity": 5 }
+        }
       ]
     },
-    "cockpit": {
-      "text": "조종실입니다. 전면에 거대한 심해 괴물이 보입니다.\n괴물과 눈이 마주치자 정신이 혼미해집니다.",
+    "corridor": {
+      "text": "복도는 좁고 축축합니다. 바닥에 버려진 '낡은 비상 가방' 하나가 보입니다.\n가방을 열어보시겠습니까?",
       "options": [
-        { 
-          "text": "손전등으로 괴물을 비춘다", 
+        {
+          "text": "가방을 뒤진다 (확률 발생)",
+          "results": [
+            {
+              "chance": 40,
+              "message": "운 좋게 보조 산소 탱크를 찾았습니다! (산소 +30)",
+              "effects": { "oxygen": 30 },
+              "next": "corridor"
+            },
+            {
+              "chance": 40,
+              "message": "가방 안에는 녹슨 '손전등'이 들어있었습니다.",
+              "getItem": "손전등",
+              "next": "corridor"
+            },
+            {
+              "chance": 20,
+              "message": "가방 안에서 심해어가 튀어나와 당신을 공격합니다! (정신력 -20)",
+              "effects": { "sanity": -20 },
+              "next": "corridor"
+            }
+          ]
+        },
+        {
+          "text": "잠긴 격벽으로 향한다",
+          "next": "gate"
+        }
+      ]
+    },
+    "gate": {
+      "text": "두꺼운 강철 격벽이 앞을 가로막고 있습니다. 틈새가 좁아 손전등 없이는 내부를 확인할 수 없습니다.",
+      "options": [
+        {
+          "text": "손전등으로 틈새를 비춘다",
           "requireItem": "손전등",
-          "effects": { "mental": 10, "ox": -5 },
-          "results": [
-            { "chance": 100, "message": "괴물이 빛을 피하며 멀어집니다! 해치가 열렸습니다.", "next": "escape_success" }
-          ]
+          "next": "inner_room"
         },
-        { "text": "맨눈으로 괴물을 노려본다", "effects": { "mental": 50 }, "next": "death_insane" }
+        {
+          "text": "무력으로 문을 연다 (산소 -20)",
+          "effects": { "oxygen": -20 },
+          "next": "inner_room"
+        },
+        {
+          "text": "처음으로 돌아가기 (리셋)",
+          "isReset": true
+        }
+      ],
+      "autoEvents": [
+        {
+          "statKey": "oxygen",
+          "threshold": 1,
+          "next": "game_over",
+          "message": "산소가 바닥났습니다. 시야가 흐려지며 의식을 잃습니다..."
+        }
       ]
     },
-    "death_ox": {
-      "text": "당신은 차가운 바닷속에서 숨을 거두었습니다.\n구조대는 당신을 찾지 못할 것입니다.",
-      "options": [{ "text": "처음부터 다시", "isReset": true }]
+    "inner_room": {
+      "text": "내부에는 고대 유물로 보이는 거대한 석판이 놓여 있습니다. 석판을 만지는 순간, 당신의 모든 기억이 요동칩니다.\n\n축하합니다. 당신은 심해의 진실에 도달했습니다.",
+      "options": [
+        {
+          "text": "새로운 탐사 시작 (리셋)",
+          "isReset": true
+        }
+      ]
     },
-    "death_insane": {
-      "text": "당신은 심해의 지식에 압도되어 미쳐버렸습니다.\n이제 당신도 괴물 중 하나가 되었습니다.",
-      "options": [{ "text": "처음부터 다시", "isReset": true }]
-    },
-    "escape_success": {
-      "text": "가까스로 탈출용 캡슐에 몸을 실었습니다.\n해수면 위로 밝은 햇살이 보이기 시작합니다.\n\n[생존 성공]",
-      "options": [{ "text": "메인 화면으로", "isReset": true }]
+    "game_over": {
+      "text": "당신은 차가운 심해의 일부가 되었습니다.\nGAME OVER",
+      "options": [
+        {
+          "text": "다시 시작",
+          "isReset": true
+        }
+      ]
     }
   }
 }
