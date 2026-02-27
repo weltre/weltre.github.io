@@ -2,163 +2,227 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>THE CLASSIC ENGINE v7.5</title>
+    <title>ENGINE v8.0 INTEGRATED</title>
     <style>
-        :root { --bg: #0a0a0c; --text: #33ff33; --border: #33ff33; --dim: #004400; }
-        body { background: var(--bg); color: var(--text); font-family: 'Courier New', monospace; margin: 0; padding: 20px; display: flex; flex-direction: column; height: 100vh; }
+        :root { --bg: #0f1115; --card: #1a1d23; --text: #e0e0e0; --point: #00d2ff; --sub: #ff4757; --border: #333; }
+        * { box-sizing: border-box; font-family: 'Pretendard', system-ui, sans-serif; }
+        body { margin: 0; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
-        /* Game Screen */
-        #screen { flex: 1; border: 2px solid var(--border); padding: 20px; overflow-y: auto; display: flex; flex-direction: column; box-shadow: inset 0 0 20px var(--dim); }
-        #status { border-bottom: 1px solid var(--dim); padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; font-weight: bold; }
-        #text-area { flex: 1; font-size: 1.2rem; line-height: 1.6; margin-bottom: 20px; }
-        #choices { display: grid; grid-template-columns: 1fr; gap: 10px; }
-        
-        /* Classic Buttons */
-        .btn { background: transparent; color: var(--text); border: 1px solid var(--border); padding: 12px; cursor: pointer; text-align: left; font-size: 1rem; }
-        .btn:hover { background: var(--text); color: var(--bg); }
-        .btn:disabled { color: var(--dim); border-color: var(--dim); cursor: not-allowed; }
+        /* Nav & UI Components */
+        nav { background: #15181c; border-bottom: 1px solid var(--border); display: flex; padding: 10px 20px; gap: 10px; align-items: center; }
+        .nav-btn { padding: 8px 16px; border: none; background: none; color: #888; font-weight: bold; cursor: pointer; }
+        .nav-btn.active { color: var(--point); border-bottom: 2px solid var(--point); }
+        .btn { padding: 8px 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 13px; }
+        .btn-blue { background: var(--point); color: #000; }
+        .btn-orange { background: #ff9f43; color: #000; }
+        .btn-red { background: var(--sub); color: #fff; }
 
-        /* Tools */
-        #tools { margin-top: 20px; display: flex; gap: 10px; opacity: 0.5; }
-        #tools:hover { opacity: 1; }
-        textarea { background: #000; color: #33ff33; border: 1px solid var(--dim); width: 100%; height: 100px; margin-top: 10px; }
-        .hidden { display: none; }
+        /* Main Layout */
+        .container { flex: 1; display: flex; overflow: hidden; }
+        #view-player, #view-maker { flex: 1; display: none; overflow: hidden; }
+        
+        /* Player Display */
+        #view-player { flex-direction: column; padding: 30px; max-width: 900px; margin: 0 auto; }
+        .stat-bar { background: var(--card); border: 1px solid var(--border); padding: 15px; border-radius: 10px; margin-bottom: 15px; display: flex; gap: 20px; color: var(--point); font-weight: bold; }
+        #scene-box { flex: 1; overflow-y: auto; background: var(--card); border: 1px solid var(--border); padding: 25px; border-radius: 10px; margin-bottom: 20px; font-size: 1.15rem; line-height: 1.8; white-space: pre-wrap; }
+        .choice-btn { width: 100%; padding: 15px; margin-bottom: 10px; background: #1e2228; border: 1px solid var(--border); border-left: 5px solid var(--point); color: #fff; border-radius: 8px; cursor: pointer; text-align: left; }
+        .choice-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        /* Maker Layout */
+        #side-list { width: 250px; background: #15181c; border-right: 1px solid var(--border); padding: 15px; overflow-y: auto; }
+        #editor-area { flex: 1; padding: 25px; overflow-y: auto; background: #0c0e12; }
+        .node-card { padding: 10px; background: var(--card); border: 1px solid var(--border); margin-bottom: 8px; border-radius: 5px; cursor: pointer; font-size: 13px; }
+        .node-card.active { border-color: var(--point); background: rgba(0,210,255,0.1); }
+        .card { background: var(--card); border: 1px solid var(--border); padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        input, textarea, select { width: 100%; background: #000; color: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 8px; margin-top: 5px; }
+
+        /* Modal */
+        #modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 99; }
+        #modal-box { background: var(--card); border: 2px solid var(--sub); padding: 25px; border-radius: 15px; width: 400px; text-align: center; }
     </style>
 </head>
 <body>
 
-<div id="status">
-    <div id="stats-display"></div>
-    <div id="inv-display"></div>
+<nav>
+    <div style="font-weight:bold; color:var(--point);">v8.0 INTEGRATED</div>
+    <button class="nav-btn active" onclick="tab('player')">PLAY</button>
+    <button class="nav-btn" onclick="tab('maker')">MAKER</button>
+    <div style="flex:1"></div>
+    <button class="btn btn-orange" onclick="saveData()">💾 EXPORT JSON</button>
+</nav>
+
+<div class="container">
+    <div id="view-player">
+        <div class="stat-bar" id="p-stats"></div>
+        <div id="scene-box"></div>
+        <div id="choice-area"></div>
+    </div>
+
+    <div id="view-maker">
+        <div id="side-list">
+            <button class="btn btn-blue" style="width:100%; margin-bottom:15px;" onclick="addNode()">+ NEW NODE</button>
+            <div id="node-list"></div>
+        </div>
+        <div id="editor-area">
+            <div class="card">
+                <b>SCENARIO CONFIG</b>
+                <input id="cfg-title" placeholder="Game Title">
+                <div id="stat-list"></div>
+                <button class="btn btn-blue" onclick="addStat()" style="margin-top:10px;">+ STAT</button>
+            </div>
+            <div id="node-editor" style="display:none">
+                <div class="card">
+                    <input id="ed-id" onblur="renameNode(this.value)" style="font-weight:bold; color:var(--point)">
+                    <textarea id="ed-text" rows="5" oninput="updText(this.value)"></textarea>
+                </div>
+                <div id="opt-list"></div>
+                <button class="btn btn-blue" onclick="addOpt()">+ OPTION</button>
+                <div id="auto-list" style="margin-top:20px;"></div>
+                <button class="btn btn-orange" onclick="addAuto()">+ AUTO EVENT</button>
+            </div>
+        </div>
+    </div>
 </div>
 
-<div id="screen">
-    <div id="text-area"></div>
-    <div id="choices"></div>
-</div>
-
-<div id="tools">
-    <button onclick="saveData()">[SAVE DATA]</button>
-    <button onclick="document.getElementById('file-input').click()">[LOAD DATA]</button>
-    <input type="file" id="file-input" class="hidden" onchange="loadData(event)">
-    <button onclick="toggleEditor()">[TOGGLE EDITOR]</button>
-</div>
-
-<div id="editor" class="hidden">
-    <h3>DATA EDITOR (JSON)</h3>
-    <textarea id="json-input"></textarea>
-    <button onclick="applyJson()">APPLY CHANGES</button>
+<div id="modal">
+    <div id="modal-box">
+        <div id="modal-text"></div><br>
+        <button class="btn btn-blue" style="width:100%" onclick="closeModal()">확인</button>
+    </div>
 </div>
 
 <script>
-    // 1. 초기 데이터 (작가님이 원하신 모든 기능 포함)
-    let gameData = {
-        config: { start: "start", stats: { oxygen: 100, sanity: 50 } },
-        scenes: {
-            "start": {
-                text: "심해 4,000m. 거대한 철문 앞에 섰습니다. \n수압이 외벽을 긁는 소리가 들립니다.",
-                options: [
-                    { text: "철문을 강제로 연다", next: "hallway", effects: { oxygen: -10 } },
-                    { text: "산소 장치를 점검한다 (최대 2회)", next: "start", maxClicks: 2, effects: { oxygen: 5 } }
-                ]
-            },
-            "hallway": {
-                text: "좁은 복도입니다. 바닥에 '카드키'가 떨어져 있습니다.",
-                options: [
-                    { text: "카드키를 줍는다", next: "hallway", getItem: "카드키" },
-                    { text: "잠긴 보안실로 향한다", next: "security", requireItem: "카드키" }
-                ],
-                autoEvents: [
-                    { stat: "oxygen", val: 1, next: "game_over", msg: "산소가 고갈되었습니다..." }
-                ]
-            },
-            "security": {
-                text: "보안실에 진입했습니다. 당신은 살아남았습니다!",
-                options: [{ text: "다시 시작", reset: true }]
-            },
-            "game_over": {
-                text: "차갑고 어두운 물이 폐로 들어옵니다...",
-                options: [{ text: "재시작", reset: true }]
-            }
+/* --- INTEGRATED DATA --- */
+let sc = {
+    config: { title: "심해 탈출 v8", stats: [{key:"oxygen", label:"산소", initial:100}] },
+    scenes: {
+        "start": { text: "심해 기지에 오신 것을 환영합니다.", options: [{text:"탐사 시작", next:"hallway", effects:{oxygen:-10}}], autoEvents: [] },
+        "hallway": { text: "좁고 어두운 복도입니다.", options: [{text:"더 깊이", next:"hallway", effects:{oxygen:-20}}], 
+          autoEvents: [{statKey:"oxygen", threshold:1, next:"dead", message:"산소가 다 떨어졌습니다!"}] },
+        "dead": { text: "게임 오버.", options: [{text:"다시 시작", isReset:true}], autoEvents: [] }
+    }
+};
+
+let state = { stats: {}, clicks: {}, next: null };
+
+/* --- CORE LOGIC --- */
+function init() {
+    state.clicks = {};
+    sc.config.stats.forEach(s => state.stats[s.key] = Number(s.initial));
+    render("start");
+}
+
+function render(id) {
+    const n = sc.scenes[id]; if(!n) return;
+    
+    // Check Auto Events
+    if(n.autoEvents) {
+        for(let a of n.autoEvents) {
+            if((state.stats[a.statKey]||0) < a.threshold) { showModal(a.message, a.next||id); return; }
         }
-    };
-
-    let state = { stats: {}, inv: new Set(), clicks: {} };
-
-    // 2. 게임 로직 (군더더기 없이 핵심만)
-    function init() {
-        state.stats = { ...gameData.config.stats };
-        state.inv = new Set();
-        state.clicks = {};
-        render("start");
     }
 
-    function render(id) {
-        const scene = gameData.scenes[id];
-        if (!scene) return;
+    // UI Render
+    document.getElementById('p-stats').innerHTML = sc.config.stats.map(s => `<span>${s.label}: ${state.stats[s.key]}</span>`).join('');
+    document.getElementById('scene-box').innerText = n.text;
+    const area = document.getElementById('choice-area'); area.innerHTML = "";
 
-        // Auto Event Check
-        if (scene.autoEvents) {
-            for (let e of scene.autoEvents) {
-                if (state.stats[e.stat] < e.val) {
-                    alert(e.msg);
-                    render(e.next);
-                    return;
-                }
-            }
-        }
+    n.options.forEach((o, i) => {
+        const key = `${id}_${i}`;
+        if(o.max && (state.clicks[key]||0) >= o.max) return;
+        const btn = document.createElement('button'); btn.className = "choice-btn";
+        btn.innerText = o.text + (o.max ? ` (${state.clicks[key]||0}/${o.max})` : "");
+        btn.onclick = () => {
+            state.clicks[key] = (state.clicks[key]||0) + 1;
+            if(o.isReset) return init();
+            if(o.effects) Object.entries(o.effects).forEach(([k,v]) => state.stats[k] += v);
+            render(o.next || id);
+        };
+        area.appendChild(btn);
+    });
+}
 
-        // Stats Display
-        document.getElementById('stats-display').innerText = Object.entries(state.stats).map(([k, v]) => `${k.toUpperCase()}:${v}`).join(' ');
-        document.getElementById('inv-display').innerText = "INV: " + (state.inv.size ? [...state.inv].join(',') : "EMPTY");
-        
-        // Text
-        document.getElementById('text-area').innerText = scene.text;
+function showModal(t, n) { document.getElementById('modal-text').innerText = t; document.getElementById('modal').style.display="flex"; state.next = n; }
+function closeModal() { document.getElementById('modal').style.display="none"; render(state.next); }
 
-        // Choices
-        const choiceArea = document.getElementById('choices');
-        choiceArea.innerHTML = "";
-        (scene.options || []).forEach((o, i) => {
-            const key = `${id}_${i}`;
-            if (o.maxClicks && (state.clicks[key] || 0) >= o.maxClicks) return;
+/* --- MAKER LOGIC --- */
+let curId = "start";
+function tab(t) {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(t)));
+    document.getElementById('view-player').style.display = t==='player'?'flex':'none';
+    document.getElementById('view-maker').style.display = t==='maker'?'flex':'none';
+    if(t==='player') init(); else syncMaker();
+}
 
-            const btn = document.createElement('button');
-            btn.className = "btn";
-            
-            let canDo = true;
-            if (o.requireItem && !state.inv.has(o.requireItem)) canDo = false;
+function syncMaker() {
+    document.getElementById('cfg-title').value = sc.config.title;
+    const list = document.getElementById('node-list'); list.innerHTML = "";
+    Object.keys(sc.scenes).forEach(id => {
+        const d = document.createElement('div'); d.className = `node-card ${curId===id?'active':''}`;
+        d.innerText = id; d.onclick = () => loadNode(id);
+        list.appendChild(d);
+    });
+    renderStatList();
+}
 
-            btn.innerText = `> ${o.text}${o.maxClicks ? ` (${state.clicks[key]||0}/${o.maxClicks})` : ""}`;
-            if (!canDo) btn.innerText += ` [필요: ${o.requireItem}]`;
-            btn.disabled = !canDo;
+function loadNode(id) {
+    curId = id; const n = sc.scenes[id];
+    document.getElementById('node-editor').style.display = "block";
+    document.getElementById('ed-id').value = id;
+    document.getElementById('ed-text').value = n.text;
+    syncMaker(); renderOptList(); renderAutoList();
+}
 
-            btn.onclick = () => {
-                state.clicks[key] = (state.clicks[key] || 0) + 1;
-                if (o.reset) return init();
-                if (o.effects) Object.entries(o.effects).forEach(([k, v]) => state.stats[k] += v);
-                if (o.getItem) state.inv.add(o.getItem);
-                render(o.next || id);
-            };
-            choiceArea.appendChild(btn);
-        });
-        
-        document.getElementById('json-input').value = JSON.stringify(gameData, null, 2);
-    }
+function renderStatList() {
+    const l = document.getElementById('stat-list'); l.innerHTML = "";
+    sc.config.stats.forEach((s, i) => {
+        const d = document.createElement('div'); d.style="display:flex; gap:5px; margin-top:5px;";
+        d.innerHTML = `<input value="${s.label}" oninput="sc.config.stats[${i}].label=this.value">
+                       <input value="${s.key}" onblur="sc.config.stats[${i}].key=this.value">
+                       <input type="number" value="${s.initial}" oninput="sc.config.stats[${i}].initial=Number(this.value)">`;
+        l.appendChild(d);
+    });
+}
 
-    // 3. 유틸리티 (저장/로드)
-    function toggleEditor() { document.getElementById('editor').classList.toggle('hidden'); }
-    function applyJson() { try { gameData = JSON.parse(document.getElementById('json-input').value); init(); } catch(e) { alert("JSON 오류!"); } }
-    function saveData() {
-        const blob = new Blob([JSON.stringify(gameData, null, 2)], {type: "application/json"});
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "game_data.json"; a.click();
-    }
-    function loadData(e) {
-        const reader = new FileReader();
-        reader.onload = ev => { gameData = JSON.parse(ev.target.result); init(); };
-        reader.readAsText(e.target.files[0]);
-    }
+function renderOptList() {
+    const l = document.getElementById('opt-list'); l.innerHTML = "<b>Options</b>";
+    sc.scenes[curId].options.forEach((o, i) => {
+        const d = document.createElement('div'); d.className = "card";
+        d.innerHTML = `<input value="${o.text}" oninput="sc.scenes['${curId}'].options[${i}].text=this.value">
+                       <div style="display:flex; gap:5px;"><input placeholder="Next" value="${o.next||''}" oninput="sc.scenes['${curId}'].options[${i}].next=this.value">
+                       <input type="number" placeholder="Max" value="${o.max||''}" oninput="sc.scenes['${curId}'].options[${i}].max=Number(this.value)"></div>
+                       <label><input type="checkbox" ${o.isReset?'checked':''} onchange="sc.scenes['${curId}'].options[${i}].isReset=this.checked"> Reset</label>
+                       <button class="btn btn-red" onclick="sc.scenes['${curId}'].options.splice(${i},1); renderOptList();" style="width:100%; margin-top:5px;">DEL</button>`;
+        l.appendChild(d);
+    });
+}
 
-    init();
+function renderAutoList() {
+    const l = document.getElementById('auto-list'); l.innerHTML = "<b>Auto Events</b>";
+    sc.scenes[curId].autoEvents.forEach((a, i) => {
+        const d = document.createElement('div'); d.className = "card";
+        d.innerHTML = `<select onchange="sc.scenes['${curId}'].autoEvents[${i}].statKey=this.value">
+                       ${sc.config.stats.map(s=>`<option value="${s.key}" ${s.key===a.statKey?'selected':''}>${s.label}</option>`).join('')}</select>
+                       가 <input type="number" value="${a.threshold}" oninput="sc.scenes['${curId}'].autoEvents[${i}].threshold=Number(this.value)"> 미만 시
+                       <input placeholder="Next" value="${a.next||''}" oninput="sc.scenes['${curId}'].autoEvents[${i}].next=this.value">
+                       <textarea oninput="sc.scenes['${curId}'].autoEvents[${i}].message=this.value">${a.message}</textarea>`;
+        l.appendChild(d);
+    });
+}
+
+function addNode() { const id = "node_"+Date.now().toString().slice(-4); sc.scenes[id] = {text:"New", options:[], autoEvents:[]}; loadNode(id); }
+function addStat() { sc.config.stats.push({key:"new", label:"새 스탯", initial:0}); renderStatList(); }
+function addOpt() { sc.scenes[curId].options.push({text:"New Option", next:""}); renderOptList(); }
+function addAuto() { sc.scenes[curId].autoEvents.push({statKey:sc.config.stats[0].key, threshold:0, next:"", message:"Alert!"}); renderAutoList(); }
+function updText(v) { sc.scenes[curId].text = v; }
+function renameNode(v) { if(!v || v===curId) return; sc.scenes[v]=sc.scenes[curId]; delete sc.scenes[curId]; curId=v; syncMaker(); }
+function saveData() { 
+    const b = new Blob([JSON.stringify(sc, null, 2)], {type:"application/json"});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = "scenario.json"; a.click();
+}
+
+// Start
+tab('player');
 </script>
 </body>
 </html>
