@@ -1,130 +1,138 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8" />
-<title>Story Engine Maker</title>
+<meta charset="UTF-8">
+<title>Story Engine</title>
+
 <style>
-:root {
+:root{
   --bg:#0f1115; --card:#1a1d23; --text:#e0e0e0;
   --point:#00d2ff; --sub:#ff9f43; --danger:#ff4757; --border:#333;
 }
-* { box-sizing:border-box; }
-body {
+*{box-sizing:border-box}
+body{
   margin:0; background:var(--bg); color:var(--text);
   font-family:system-ui, sans-serif;
 }
-nav {
-  display:flex; border-bottom:1px solid var(--border);
-  background:#15181c;
+nav{
+  display:flex; align-items:center;
+  background:#15181c; border-bottom:1px solid var(--border);
 }
-.nav-btn {
-  flex:1; padding:14px; cursor:pointer;
-  background:none; border:none; color:#888; font-weight:700;
+.nav-btn{
+  padding:14px 18px; border:none; background:none;
+  color:#888; font-weight:700; cursor:pointer;
 }
-.nav-btn.active {
-  color:var(--point);
-  border-bottom:3px solid var(--point);
-  background:rgba(0,210,255,.05);
+.nav-btn.active{
+  color:var(--point); border-bottom:3px solid var(--point);
 }
-button {
-  cursor:pointer; border:none; border-radius:6px;
-  padding:8px 12px; font-weight:600;
-}
-.btn-blue { background:var(--point); color:#000; }
-.btn-orange { background:var(--sub); color:#000; }
-.btn-red { background:var(--danger); color:#fff; }
+.btn{padding:8px 12px;border:none;border-radius:6px;font-weight:600;cursor:pointer}
+.btn-blue{background:var(--point);color:#000}
+.btn-orange{background:var(--sub);color:#000}
+.btn-red{background:var(--danger);color:#fff}
 
-input, textarea, select {
+input,textarea,select{
   width:100%; padding:8px;
   background:#000; border:1px solid var(--border);
   color:#fff; border-radius:5px;
 }
 
-.container { height:100vh; display:flex; flex-direction:column; }
-.view { flex:1; display:none; overflow:hidden; }
+.container{height:100vh;display:flex;flex-direction:column}
+.view{flex:1;display:none;overflow:hidden}
 
-.card {
-  background:var(--card); border:1px solid var(--border);
-  border-radius:10px; padding:15px; margin-bottom:15px;
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:15px;
+  margin-bottom:15px;
 }
-.card-title {
-  font-weight:800; color:var(--point); margin-bottom:10px;
+.card-title{
+  font-weight:800; color:var(--point);
+  margin-bottom:10px;
 }
-.sub-card {
-  border:1px dashed #555; border-radius:8px;
-  padding:10px; margin-top:10px;
+.sub-card{
+  border:1px dashed #555;
+  border-radius:8px;
+  padding:10px;
+  margin-top:10px;
 }
-.row { display:flex; gap:8px; }
-.row > * { flex:1; }
 
-#maker {
-  display:flex;
-}
-#scene-list {
+.row{display:flex;gap:8px}
+.row>div{flex:1}
+
+#maker{display:flex}
+#scene-list{
   width:260px; border-right:1px solid var(--border);
   padding:15px; overflow-y:auto;
 }
-#editor {
-  flex:1; padding:20px; overflow-y:auto;
-}
-
-.scene-btn {
-  padding:8px; margin-bottom:5px;
+.scene-btn{
+  padding:8px; margin-bottom:6px;
   border:1px solid var(--border); border-radius:6px;
+  cursor:pointer;
 }
-.scene-btn.active { border-color:var(--point); }
+.scene-btn.active{border-color:var(--point)}
 
-#player {
+#editor{flex:1;padding:20px;overflow-y:auto}
+
+#player{
   padding:20px; display:flex; flex-direction:column;
 }
-#status { margin-bottom:10px; color:var(--point); }
-#inventory { margin-bottom:10px; color:var(--sub); }
-#scene-text { white-space:pre-wrap; line-height:1.6; margin-bottom:15px; }
-.option-btn {
-  width:100%; text-align:left; margin-bottom:8px;
+#status{color:var(--point);margin-bottom:8px}
+#inventory{color:var(--sub);margin-bottom:12px}
+#scene-text{white-space:pre-wrap;line-height:1.6;margin-bottom:15px}
+.option-btn{
+  width:100%; text-align:left;
+  padding:14px; margin-bottom:8px;
   background:var(--card); color:#fff;
-  border:1px solid var(--border); border-left:4px solid var(--point);
+  border:1px solid var(--border);
+  border-left:4px solid var(--point);
 }
-.option-btn:disabled { opacity:.4; }
+.option-btn:disabled{opacity:.4}
 
-#msg {
-  position:fixed; inset:0; display:none;
+#msg{
+  position:fixed; inset:0;
+  display:none; align-items:center; justify-content:center;
   background:rgba(0,0,0,.6);
-  align-items:center; justify-content:center;
 }
-#msg-box {
-  background:var(--card); padding:20px;
-  border-radius:10px; max-width:400px;
+#msg-box{
+  background:var(--card);
+  padding:20px; border-radius:10px;
+  max-width:420px;
 }
 </style>
 </head>
+
 <body>
-
 <div class="container">
-  <nav>
-    <button class="nav-btn active" onclick="switchTab('maker')">MAKER</button>
-    <button class="nav-btn" onclick="switchTab('player')" id="playBtn" disabled>PLAY</button>
-    <div style="padding:8px">
-      <button class="btn-orange" onclick="save()">SAVE JSON</button>
-    </div>
-  </nav>
 
-  <!-- MAKER -->
-  <div id="maker" class="view" style="display:flex">
-    <div id="scene-list">
-      <button class="btn-blue" style="width:100%" onclick="addScene()">+ Scene</button>
-      <div id="sceneBtns"></div>
-    </div>
-    <div id="editor"></div>
-  </div>
+<nav>
+  <button class="nav-btn active" onclick="switchTab('maker')">MAKER</button>
+  <button class="nav-btn" onclick="switchTab('player')" id="playBtn">PLAY</button>
 
-  <!-- PLAYER -->
-  <div id="player" class="view">
-    <div id="status"></div>
-    <div id="inventory"></div>
-    <div id="scene-text"></div>
-    <div id="options"></div>
+  <div style="margin-left:auto;padding:8px;display:flex;gap:6px">
+    <input type="file" id="loader" style="display:none" onchange="loadJSON(event)">
+    <button class="btn-orange" onclick="document.getElementById('loader').click()">LOAD</button>
+    <button class="btn-orange" onclick="saveJSON()">SAVE</button>
   </div>
+</nav>
+
+<!-- MAKER -->
+<div id="maker" class="view" style="display:flex">
+  <div id="scene-list">
+    <button class="btn-blue" style="width:100%" onclick="addScene()">+ Scene</button>
+    <div id="sceneBtns"></div>
+  </div>
+  <div id="editor"></div>
+</div>
+
+<!-- PLAYER -->
+<div id="player" class="view">
+  <div id="status"></div>
+  <div id="inventory"></div>
+  <div id="scene-text"></div>
+  <div id="options"></div>
+</div>
+
 </div>
 
 <div id="msg">
@@ -135,129 +143,179 @@ input, textarea, select {
 </div>
 
 <script>
-/* ===== DATA ===== */
-let sc = {
+/* ================= DATA ================= */
+let sc={
   config:{
     title:"예제 게임",
     themeColor:"#00d2ff",
-    stats:[{key:"hp",label:"체력",initial:100}]
+    subColor:"#ff9f43",
+    startNode:"start",
+    stats:[
+      {key:"hp",label:"체력",initial:100}
+    ]
   },
   scenes:{
     start:{
       text:"시작 장면입니다.",
       options:[
-        { text:"다음으로", next:"end" }
+        {text:"다음으로",next:"end"}
       ]
     },
     end:{
       text:"끝입니다.",
-      options:[{ text:"리셋", isReset:true }]
+      options:[{text:"리셋",isReset:true}]
     }
   }
 };
 
-let curScene = "start";
-let state = { stats:{}, inv:new Set(), clicks:{} };
+let curScene="start";
+let state={stats:{},inv:new Set(),clicks:{}};
 
-/* ===== TABS ===== */
+/* ================= TABS ================= */
 function switchTab(t){
   document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
-  document.querySelector(`[onclick="switchTab('${t}')"]`).classList.add("active");
+  document.querySelector(`.nav-btn[onclick*="${t}"]`).classList.add("active");
   document.querySelectorAll(".view").forEach(v=>v.style.display="none");
   document.getElementById(t).style.display="flex";
   if(t==="player") startPlay();
 }
 
-/* ===== MAKER ===== */
-function validate(){
-  let ok = sc.scenes[sc.config.startNode||"start"];
-  document.getElementById("playBtn").disabled = !ok;
-}
-
+/* ================= MAKER ================= */
 function addScene(){
   let id="scene_"+Date.now();
-  sc.scenes[id]={ text:"", options:[] };
+  sc.scenes[id]={text:"",options:[]};
   curScene=id;
   renderMaker();
 }
 
 function renderMaker(){
-  validate();
+  // scene list
   let list=document.getElementById("sceneBtns");
   list.innerHTML="";
   Object.keys(sc.scenes).forEach(id=>{
-    let b=document.createElement("div");
-    b.className="scene-btn"+(id===curScene?" active":"");
-    b.innerText=id;
-    b.onclick=()=>{curScene=id;renderMaker();}
-    list.appendChild(b);
+    let d=document.createElement("div");
+    d.className="scene-btn"+(id===curScene?" active":"");
+    d.innerText=id;
+    d.onclick=()=>{curScene=id;renderMaker()};
+    list.appendChild(d);
   });
 
   let s=sc.scenes[curScene];
   let ed=document.getElementById("editor");
+
   ed.innerHTML=`
   <div class="card">
+    <div class="card-title">Global Config</div>
+    <label>Title</label>
+    <input value="${sc.config.title}" oninput="sc.config.title=this.value">
+    <label>Start Node</label>
+    <select onchange="sc.config.startNode=this.value">
+      ${Object.keys(sc.scenes).map(id=>`
+        <option value="${id}" ${id===sc.config.startNode?"selected":""}>${id}</option>
+      `).join("")}
+    </select>
+  </div>
+
+  <div class="card">
     <div class="card-title">Scene : ${curScene}</div>
+    <label>Text</label>
     <textarea rows="4" oninput="s.text=this.value">${s.text}</textarea>
   </div>
+
   <div class="card">
     <div class="card-title">Options</div>
     ${(s.options||[]).map((o,i)=>`
       <div class="sub-card">
+        <label>Text</label>
         <input value="${o.text||""}" oninput="s.options[${i}].text=this.value">
+
         <div class="row">
-          <input placeholder="next" value="${o.next||""}" oninput="s.options[${i}].next=this.value">
-          <input placeholder="requireItem" value="${o.requireItem||""}" oninput="s.options[${i}].requireItem=this.value">
+          <div>
+            <label>Next</label>
+            <input value="${o.next||""}" oninput="s.options[${i}].next=this.value">
+          </div>
+          <div>
+            <label>Require Item</label>
+            <input value="${o.requireItem||""}" oninput="s.options[${i}].requireItem=this.value">
+          </div>
         </div>
-        <label><input type="checkbox" ${o.isReset?"checked":""} onchange="s.options[${i}].isReset=this.checked"> Reset</label>
+
+        <label><input type="checkbox" ${o.isReset?"checked":""}
+          onchange="s.options[${i}].isReset=this.checked"> Reset</label>
+
         <button class="btn-red" onclick="s.options.splice(${i},1);renderMaker()">삭제</button>
       </div>
     `).join("")}
     <button class="btn-blue" onclick="s.options.push({text:'선택지',next:curScene});renderMaker()">+ Option</button>
-  </div>`;
+  </div>
+  `;
 }
 
-renderMaker();
-
-/* ===== PLAYER ===== */
+/* ================= PLAYER ================= */
 function startPlay(){
-  state.inv.clear(); state.clicks={}; state.stats={};
+  state.inv.clear();
+  state.clicks={};
+  state.stats={};
   sc.config.stats.forEach(st=>state.stats[st.key]=st.initial);
-  renderScene(sc.config.startNode||"start");
+  renderScene(sc.config.startNode);
 }
 
 function renderScene(id){
-  let s=sc.scenes[id]; if(!s)return;
+  let s=sc.scenes[id];
+  if(!s)return;
+
   document.getElementById("scene-text").innerText=s.text;
   document.getElementById("status").innerText=
     sc.config.stats.map(st=>`${st.label}: ${state.stats[st.key]}`).join(" | ");
   document.getElementById("inventory").innerText=
     "아이템: "+(state.inv.size?[...state.inv].join(", "):"없음");
-  let box=document.getElementById("options"); box.innerHTML="";
+
+  let box=document.getElementById("options");
+  box.innerHTML="";
+
   (s.options||[]).forEach((o,i)=>{
     let b=document.createElement("button");
     b.className="option-btn";
     b.innerText=o.text;
-    if(o.requireItem && !state.inv.has(o.requireItem)) b.disabled=true;
+
+    if(o.requireItem && !state.inv.has(o.requireItem)){
+      b.disabled=true;
+      b.innerText+=" (필요: "+o.requireItem+")";
+    }
+
     b.onclick=()=>{
       if(o.isReset) return startPlay();
       renderScene(o.next||id);
     };
+
     box.appendChild(b);
   });
 }
 
-/* ===== MSG ===== */
+/* ================= LOAD / SAVE ================= */
+function saveJSON(){
+  let a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(sc,null,2)]));
+  a.download="scenario.json";
+  a.click();
+}
+function loadJSON(e){
+  let r=new FileReader();
+  r.onload=ev=>{
+    sc=JSON.parse(ev.target.result);
+    curScene=sc.config.startNode;
+    renderMaker();
+  };
+  r.readAsText(e.target.files[0]);
+}
+
+/* ================= MSG ================= */
 function closeMsg(){
   document.getElementById("msg").style.display="none";
 }
 
-/* ===== SAVE ===== */
-function save(){
-  let a=document.createElement("a");
-  a.href=URL.createObjectURL(new Blob([JSON.stringify(sc,null,2)]));
-  a.download="scenario.json"; a.click();
-}
+/* init */
+renderMaker();
 </script>
 </body>
 </html>
