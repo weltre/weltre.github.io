@@ -2,86 +2,43 @@
 <link rel="stylesheet" href="style.css"></head><body>
 <div class="container">
     <div class="status-bar">
-        <div id="p1-score" style="font-size:40px; color:var(--p1); font-weight:bold;">0</div>
-        <div id="msg-area" style="min-width:200px;">
-            <div id="res-msg" style="font-size:22px; font-weight:bold; color:var(--timer);">전투 시작!</div>
-        </div>
-        <div id="p2-score" style="font-size:40px; color:var(--p2); font-weight:bold;">0</div>
+        <div id="p1-score" style="font-size:40px; color:#3498db; font-weight:bold;">0</div>
+        <div id="res-msg" style="font-size:22px; font-weight:bold; color:var(--timer); min-width:200px;">전투 시작!</div>
+        <div id="p2-score" style="font-size:40px; color:#e74c3c; font-weight:bold;">0</div>
     </div>
     <canvas id="tankCanvas" width="760" height="500"></canvas>
-    <div class="info-text">P1(파랑): WASD + Space(발사) | P2(빨강): 방향키 + Enter(발사)<br>총알은 벽에 2번 튕깁니다! 자기 총알에 맞지 않게 조심하세요.<br><button onclick="location.href='index.html'">목록으로</button></div>
+    <div class="info-text">P1(파랑): WASD + Space | P2(빨강): 방향키 + Enter<br><button onclick="location.href='index.html'">목록으로</button></div>
 </div>
 <script>
     const cvs=document.getElementById("tankCanvas"), ctx=cvs.getContext("2d");
     const p1s=document.getElementById("p1-score"), p2s=document.getElementById("p2-score"), msg=document.getElementById("res-msg");
     let keys={}, bullets=[], particles=[], isOver=false;
-    
     class Tank {
-        constructor(x, y, color, controls) {
-            this.x=x; this.y=y; this.color=color; this.angle=0; this.score=0; this.controls=controls;
-            this.w=30; this.h=20; this.speed=0; this.rotSpeed=0; this.cooldown=0;
-        }
+        constructor(x, y, color, ctrl) { this.x=x; this.y=y; this.color=color; this.angle=0; this.score=0; this.ctrl=ctrl; this.w=30; this.h=20; this.speed=0; this.cooldown=0; }
         update() {
             if(isOver) return;
-            if(keys[this.controls.up]) this.speed=2.5; else if(keys[this.controls.down]) this.speed=-2; else this.speed*=0.9;
-            if(keys[this.controls.left]) this.rotSpeed=-0.06; else if(keys[this.controls.right]) this.rotSpeed=0.06; else this.rotSpeed=0;
-            this.angle+=this.rotSpeed;
+            if(keys[this.ctrl.u]) this.speed=2.5; else if(keys[this.ctrl.d]) this.speed=-2; else this.speed*=0.9;
+            if(keys[this.ctrl.l]) this.angle-=0.06; if(keys[this.ctrl.r]) this.angle+=0.06;
             let nx=this.x+Math.cos(this.angle)*this.speed, ny=this.y+Math.sin(this.angle)*this.speed;
             if(nx>20 && nx<740) this.x=nx; if(ny>20 && ny<480) this.y=ny;
             if(this.cooldown>0) this.cooldown--;
-            if(keys[this.controls.fire] && this.cooldown===0) {
-                bullets.push({x:this.x+Math.cos(this.angle)*20, y:this.y+Math.sin(this.angle)*20, vx:Math.cos(this.angle)*5, vy:Math.sin(this.angle)*5, b:0, owner:this});
-                this.cooldown=30;
-            }
+            if(keys[this.ctrl.f] && this.cooldown===0) { bullets.push({x:this.x+Math.cos(this.angle)*20, y:this.y+Math.sin(this.angle)*20, vx:Math.cos(this.angle)*5, vy:Math.sin(this.angle)*5, b:0}); this.cooldown=30; }
         }
-        draw() {
-            ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
-            ctx.fillStyle=this.color; ctx.fillRect(-this.w/2, -this.h/2, this.w, this.h);
-            ctx.fillStyle="#333"; ctx.fillRect(0, -3, 20, 6); ctx.restore();
-        }
+        draw() { ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle); ctx.fillStyle=this.color; ctx.fillRect(-this.w/2, -this.h/2, this.w, this.h); ctx.fillStyle="#333"; ctx.fillRect(0, -3, 20, 6); ctx.restore(); }
     }
-
-    const p1=new Tank(100, 250, "#3498db", {up:'w', down:'s', left:'a', right:'d', fire:' '});
-    const p2=new Tank(660, 250, "#e74c3c", {up:'ArrowUp', down:'ArrowDown', left:'ArrowLeft', right:'ArrowRight', fire:'Enter'});
-
-    window.onkeydown=e=>keys[e.key]=true; window.onkeyup=e=>keys[e.key]=false;
-
-    function explode(x, y) {
-        for(let i=0; i<15; i++) particles.push({x, y, vx:(Math.random()-0.5)*10, vy:(Math.random()-0.5)*10, life:30});
-    }
-
+    const p1=new Tank(100, 250, "#3498db", {u:'w', d:'s', l:'a', r:'d', f:' '});
+    const p2=new Tank(660, 250, "#e74c3c", {u:'ArrowUp', d:'ArrowDown', l:'ArrowLeft', r:'ArrowRight', f:'Enter'});
+    window.onkeydown=e=>keys[e.key.toLowerCase()]=keys[e.key]=true; 
+    window.onkeyup=e=>keys[e.key.toLowerCase()]=keys[e.key]=false;
     function loop() {
-        ctx.fillStyle="#1a1a1a"; ctx.fillRect(0,0,760,500);
-        ctx.strokeStyle="#444"; ctx.lineWidth=10; ctx.strokeRect(0,0,760,500);
-
+        ctx.fillStyle="#1a1a1a"; ctx.fillRect(0,0,760,500); ctx.strokeStyle="#444"; ctx.lineWidth=10; ctx.strokeRect(0,0,760,500);
         [p1, p2].forEach(p=>{ p.update(); p.draw(); });
-
         bullets.forEach((b, i)=>{
-            b.x+=b.vx; b.y+=b.vy;
-            if(b.x<10 || b.x>750) { b.vx*=-1; b.b++; }
-            if(b.y<10 || b.y>490) { b.vy*=-1; b.b++; }
-            
+            b.x+=b.vx; b.y+=b.vy; if(b.x<15 || b.x>745) { b.vx*=-1; b.b++; } if(b.y<15 || b.y>485) { b.vy*=-1; b.b++; }
             ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI*2); ctx.fill();
-
-            [p1, p2].forEach(p=>{
-                let d=Math.hypot(b.x-p.x, b.y-p.y);
-                if(d<18) {
-                    explode(p.x, p.y); bullets.splice(i, 1);
-                    if(p===p1) p2.score++; else p1.score++;
-                    p1s.innerText=p1.score; p2s.innerText=p2.score;
-                    p1.x=100; p1.y=250; p2.x=660; p2.y=250;
-                    if(p1.score>=5 || p2.score>=5) { isOver=true; msg.innerText=(p1.score>=5?"파랑":"빨강")+" 최종 승리!"; }
-                }
-            });
+            [p1, p2].forEach(p=>{ if(Math.hypot(b.x-p.x, b.y-p.y)<18){ bullets.splice(i,1); if(p===p1) p2.score++; else p1.score++; p1s.innerText=p1.score; p2s.innerText=p2.score; p1.x=100; p1.y=250; p2.x=660; p2.y=250; if(p1.score>=5||p2.score>=5){isOver=true; msg.innerText=(p1.score>=5?"파랑":"빨강")+" 승리!";} } });
             if(b.b>2) bullets.splice(i, 1);
         });
-
-        particles.forEach((p, i)=>{
-            p.x+=p.vx; p.y+=p.vy; p.life--;
-            ctx.fillStyle=`rgba(255,165,0,${p.life/30})`; ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fill();
-            if(p.life<=0) particles.splice(i, 1);
-        });
         requestAnimationFrame(loop);
-    }
-    loop();
+    } loop();
 </script></body></html>
