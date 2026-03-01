@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>이상형 월드컵 - 마스터피스</title>
+<style>
+:root{ --bg:#ffffff; --text:#222; --card:#f5f5f5; --accent:#4f46e5; --border:#e5e7eb; }
+.dark{ --bg:#18181b; --text:#f4f4f5; --card:#27272a; --accent:#818cf8; --border:#3f3f46; }
+body{ margin:0; font-family:system-ui, -apple-system, sans-serif; background:var(--bg); color:var(--text); transition: 0.3s; line-height: 1.5; overflow-x: hidden; }
+#topbar{ display:flex; align-items:center; justify-content:center; padding:12px 20px; border-bottom:1px solid var(--border); background:var(--bg); position:sticky; top:0; z-index: 100; }
+#topbar h1{ margin:0; flex:1; text-align:center; font-size:20px; font-weight:600; }
+button{ background:var(--card); border:1px solid var(--border); padding:8px 16px; border-radius:8px; cursor:pointer; color:var(--text); font-weight: 500; transition: 0.2s; outline: none; }
+button.primary{ background:var(--accent); color:white; border:none; }
+button:hover{ opacity:0.8; transform:scale(1.02); }
+#main{ max-width:1100px; margin:40px auto; padding:0 20px; }
+.hidden{ display:none; }
+.center{ text-align:center; }
+.card{ background:var(--card); padding:30px; border-radius:16px; margin-bottom:20px; border:1px solid var(--border); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+.choice{ flex:1; margin:10px; padding:40px; border-radius:16px; border:2px solid var(--border); background:var(--card); cursor:pointer; text-align:center; font-size:22px; font-weight: bold; transition: 0.2s; min-width: 280px; box-sizing: border-box; }
+.choice:hover{ border-color:var(--accent); transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+.choice img{ width:100%; height:auto; max-height:450px; border-radius:12px; margin-bottom:15px; object-fit: contain; background:#ddd; pointer-events: none; }
+.row{ display:flex; flex-wrap: wrap; justify-content: center; }
+#progressWrap{ height:12px; background:var(--border); border-radius:10px; margin-bottom:25px; overflow:hidden; }
+#progress{ height:100%; width:0%; background:var(--accent); transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+#roundLabel{ font-size: 32px; font-weight: 900; margin-bottom: 20px; text-align: center; color: var(--accent); }
+input,textarea,select{ width:100%; padding:12px; margin-bottom:15px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--text); box-sizing: border-box; font-family: inherit; }
+textarea{ resize:vertical; min-height: 120px; }
+img.mainimg{ max-width:100%; max-height: 350px; border-radius:16px; margin-bottom:20px; object-fit: cover; }
+#itemCountText { font-size: 16px; color: var(--accent); font-weight: 600; margin-bottom: 5px; }
+label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px; text-align: left; }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+    <h1>이상형 월드컵</h1>
+    <div style="display:flex; gap:10px;">
+        <button id="editorBtn">에디터</button>
+        <button id="themeBtn">어둡게</button>
+    </div>
+</div>
+
+<div id="main">
+    <div id="view-home" class="view center">
+        <div class="card">
+            <h2>월드컵 시작하기</h2>
+            <p>JSON 파일을 업로드하여 대회를 시작하세요.</p>
+            <input id="fileInput" type="file" accept=".json">
+        </div>
+    </div>
+
+    <div id="view-intro" class="view hidden">
+        <div class="card center">
+            <img id="mainImage" class="mainimg hidden">
+            <h2 id="introTitle"></h2>
+            <p id="introDesc"></p>
+            <div style="margin: 30px 0;">
+                <div id="itemCountText"></div>
+                <strong>시작 대진 설정:</strong><br><br>
+                <select id="roundSelect" style="max-width:300px;"></select>
+            </div>
+            <button id="startBtn" class="primary" style="padding: 15px 40px; font-size: 18px;">대회 시작!</button>
+        </div>
+    </div>
+
+    <div id="view-play" class="view hidden">
+        <div id="progressWrap"><div id="progress"></div></div>
+        <div id="roundLabel"></div>
+        <div class="row">
+            <div id="leftChoice" class="choice" onclick="choose(0)"></div>
+            <div id="rightChoice" class="choice" onclick="choose(1)"></div>
+        </div>
+    </div>
+
+    <div id="view-winner" class="view hidden center">
+        <div class="card">
+            <h2 style="font-size: 36px; color: #f59e0b;">🏆 최종 우승 🏆</h2>
+            <div id="winnerContent" style="margin: 35px 0;"></div>
+            <div style="display:flex; gap:10px; justify-content:center;">
+                <button onclick="location.reload()">처음으로</button>
+                <button id="replayBtn" class="primary">다시하기</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-editor" class="view hidden">
+        <div class="card">
+            <h2>대회 제작 에디터</h2>
+            <input id="editorImportFile" type="file" accept=".json">
+            <hr style="margin:25px 0; border:0; border-top:1px solid var(--border);">
+            <div id="editorInputs">
+                <label>대회 제목</label><input id="editTitle">
+                <label>설명</label><textarea id="editDesc"></textarea>
+                <label>메인 이미지 URL</label><input id="editImage">
+                <label>항목 (이름;이미지URL - 한 줄에 하나씩)</label>
+                <textarea id="editItems" placeholder="예: 사과;https://example.com/apple.jpg"></textarea>
+                <label>저장 파일명</label><input id="exportFilename" placeholder="my_worldcup">
+                <button id="exportBtn" class="primary" style="width:100%;">JSON 파일 다운로드</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let data = null, current = [], next = [], totalMatches = 0, played = 0;
+let isQualifying = false, roundText = "";
+
+const $ = (id) => document.getElementById(id);
+const views = document.querySelectorAll('.view');
+const DEFAULT_IMG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAAWUlEQVR4nO3BMQEAAAgDINc/9K3hHFgYyMkJO4tDrVbBMAAAAAAAAAMCiRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkaA3WlDvgAAAAASUVORK5CYII=";
+
+function showView(targetId) {
+    views.forEach(v => v.classList.add('hidden'));
+    $(targetId).classList.remove('hidden');
+}
+
+function handleFile(file, callback) {
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => { try { callback(JSON.parse(e.target.result)); } catch(err) { alert("JSON 형식이 아닙니다."); } };
+    reader.readAsText(file);
+}
+
+$('fileInput').onchange = (e) => handleFile(e.target.files[0], (json) => { data = json; showIntro(); });
+$('editorImportFile').onchange = (e) => handleFile(e.target.files[0], (json) => {
+    $('editTitle').value = json.title || "";
+    $('editDesc').value = json.desc || "";
+    $('editImage').value = json.mainImage || "";
+    $('editItems').value = (json.items || []).map(i => `${i.name}${i.img ? ';' + i.img : ''}`).join('\n');
+});
+
+function showIntro() {
+    showView('view-intro');
+    $('introTitle').textContent = data.title;
+    $('introDesc').textContent = data.desc;
+    $('itemCountText').textContent = `총 항목: ${data.items.length}개`;
+    const mi = $('mainImage');
+    if(data.mainImage) { mi.src = data.mainImage; mi.classList.remove('hidden'); } else { mi.classList.add('hidden'); }
+    
+    const select = $('roundSelect');
+    select.innerHTML = "<option value='all'>전체 (필요시 예선 실시)</option>";
+    let n = data.items.length, r = Math.pow(2, Math.floor(Math.log2(n)));
+    while(r >= 4) {
+        let opt = document.createElement('option');
+        opt.value = r; opt.textContent = `${r}강부터 시작`;
+        select.appendChild(opt); r /= 2;
+    }
+}
+
+$('startBtn').onclick = () => {
+    const val = $('roundSelect').value;
+    let items = [...data.items]; 
+    for(let i = items.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [items[i], items[j]] = [items[j], items[i]]; }
+    
+    if(val === 'all') {
+        const n = items.length, target = Math.pow(2, Math.floor(Math.log2(n)));
+        if(n > target) {
+            const qCount = (n - target) * 2;
+            current = items.slice(0, qCount); next = items.slice(qCount); isQualifying = true;
+        } else { current = items; next = []; isQualifying = false; }
+    } else { current = items.slice(0, parseInt(val)); next = []; isQualifying = false; }
+    
+    played = 0; totalMatches = (val === 'all' ? data.items.length : parseInt(val)) - 1;
+    setRoundLabel(); renderMatch();
+};
+
+function setRoundLabel() {
+    if (isQualifying) roundText = "예 선";
+    else {
+        const c = current.length + next.length;
+        roundText = c === 2 ? "결 승" : c === 4 ? "준결승 (4강)" : `${c}강`;
+    }
+}
+
+function renderMatch() {
+    if(current.length === 0) {
+        current = [...next]; next = []; isQualifying = false;
+        if(current.length === 1) return showWinner(current[0]);
+        setRoundLabel();
+    }
+    showView('view-play');
+    $('roundLabel').textContent = roundText;
+    $('progress').style.width = `${(played / totalMatches) * 100}%`;
+    renderItem('leftChoice', current[0]);
+    renderItem('rightChoice', current[1]);
+}
+
+function renderItem(id, item) {
+    $(id).innerHTML = `<img src="${item.img || DEFAULT_IMG}" onerror="this.src='${DEFAULT_IMG}'"><div>${item.name}</div>`;
+}
+
+function choose(idx) {
+    played++; next.push(current[idx]); current.splice(0, 2); renderMatch();
+}
+
+function showWinner(item) {
+    showView('view-winner');
+    $('winnerContent').innerHTML = `<img src="${item.img || DEFAULT_IMG}" onerror="this.src='${DEFAULT_IMG}'" style="max-width:100%; max-height:500px; border-radius:16px;"><h3>${item.name}</h3>`;
+}
+
+$('replayBtn').onclick = showIntro;
+
+$('editorBtn').onclick = () => {
+    if ($('view-editor').classList.contains('hidden')) {
+        showView('view-editor');
+    } else {
+        data ? showIntro() : showView('view-home');
+    }
+};
+
+$('exportBtn').onclick = () => {
+    const lines = $('editItems').value.split('\n').filter(l => l.trim());
+    if(lines.length < 4) return alert("최소 4개 항목이 필요합니다.");
+    const items = lines.map(l => { const p = l.split(';'); return { name: p[0].trim(), img: p[1]?.trim() || "" }; });
+    const json = { title: $('editTitle').value || "무제 대회", desc: $('editDesc').value || "", mainImage: $('editImage').value || "", items };
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(json, null, 2)], {type: "application/json"}));
+    a.download = `${$('exportFilename').value || 'worldcup'}.json`;
+    a.click();
+};
+
+$('themeBtn').onclick = () => {
+    document.body.classList.toggle('dark');
+    $('themeBtn').textContent = document.body.classList.contains('dark') ? "밝게" : "어둡게";
+};
+</script>
+</body>
+</html>
